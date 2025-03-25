@@ -5,6 +5,7 @@ import assets
 import os
 import seaborn as sns
 import requests
+
 class PortfolioUtilities():
     def __init__(self):
         if os.name == "nt":
@@ -12,7 +13,7 @@ class PortfolioUtilities():
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
     def GetAssetsTimeSeries(self, assetComponents, fileName):
-        isinDf = yf.download(assetComponents, start="2000-01-01", end="2025-03-01", interval="1d")
+        isinDf = yf.download(assetComponents, start="2015-01-01", end="2025-03-01", interval="1d")
         isinDf = isinDf['Close']
         isinDf.to_pickle(self.path + fileName)
 
@@ -35,7 +36,7 @@ class PortfolioUtilities():
             if toTicker:
                 d = self.isin_to_ticker(d.ISIN, False)
             isin.append(d.ISIN)
-        isinDf = yf.download(isin, start="2000-01-01", end="2025-03-01", interval="1d")
+        isinDf = yf.download(isin, start="2015-01-01", end="2025-03-01", interval="1d")
         isinDf = isinDf.loc[:, isinDf.isna().mean() * 100 < 100]['Close']
         isinDf.to_pickle(self.path + fileName.replace(".csv", ".pkl"))
 
@@ -120,11 +121,11 @@ class PortfolioUtilities():
         if sharpe_ratio is not None:
             info_text += f"Ratio de Sharpe: {sharpe_ratio:.2f}\n\n"
         if rendement is not None:
-            info_text += f"Rendement: {rendement:.2f}%\n\n"
+            info_text += f"Rendement: {rendement*100:.2f}%\n\n"
         if volatilite is not None:
-            info_text += f"Volatilité: {volatilite:.2f}%\n\n"
+            info_text += f"Volatilité: {volatilite*100:.2f}%\n\n"
         if performance is not None:
-            info_text += f"Performance: {performance:.2f}%"
+            info_text += f"Performance: {performance*100:.2f}%"
 
         if info_text:
             # Ajouter un encadré de texte sur le graphique

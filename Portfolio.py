@@ -81,8 +81,8 @@ class ModernPortfolioTheory():
         i = 0
         for f in fileNames:
             localDf = pd.read_pickle(path + f[0])
-            localDf = localDf.loc[:, localDf.isna().mean() * 100 < 90]
-            localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 90, :]
+            localDf = localDf.loc[:, localDf.isna().mean() * 100 < 95]
+            localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 95, :]
             assets.append(list(localDf.columns))
             data.append(localDf)
         fullData = pd.concat(data, axis=1)
@@ -102,7 +102,7 @@ class ModernPortfolioTheory():
         vecteur[indice_max] += erreur
         return np.round(vecteur, 2)
 
-    def SelectRandomAssets(self, data, isin, portfolioLenght, nbOfSimulation, percentage):
+    def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage):
         timeSeries = data
         data = data.pct_change()  # .dropna()
         bestPortfolios = []
@@ -113,8 +113,14 @@ class ModernPortfolioTheory():
             enoughData = False
             while not enoughData:
                 portfolio = []  # random portfolio
+                portfolioLenght = 0
                 for p in percentage:
-                    vecteur = random.sample(range(len(isin[k])), percentage[k][1])
+                    if len(isin[k]) < percentage[k][1]:
+                        quantity = len(isin[k])
+                    else:
+                        quantity = percentage[k][1]
+                    vecteur = random.sample(range(len(isin[k])), quantity)
+                    portfolioLenght += quantity
                     for v in vecteur:
                         portfolio.append(isin[k][v])
                     k += 1
@@ -165,15 +171,19 @@ class ModernPortfolioTheory():
 
 
 #portfolioStructure = [["SMI Components.pkl", 5], ["Swiss Shares CHF.pkl", 0], ["Dow Jones.pkl", 0], ["NASDAQ100.pkl", 0], ['ETF Swiss Bonds.pkl', 0]]
-portfolioStructure = [["SMI Components.pkl", 5], ['ETF Swiss Bonds.pkl', 0]]
+portfolioStructure = [["SMI Mid Components CHF.pkl", 5],
+                      ["ETF Equity Developed Markets CHF.pkl", 0],
+                      ["SMI Components.pkl", 8],
+                      ["ETF Swiss Bonds CHF.pkl", 0],
+                      ["ETF Swiss Commodities CHF.pkl", 0]]
 portfolio = ModernPortfolioTheory()
 portfolioUtilities = pu.PortfolioUtilities()
 #portfolioUtilities.GetAssetsTimeSeries(assets.nasdaq_100_tickers, "NASDAQ100.pkl")
-#portfolioUtilities.GetTimeSeries("SMI Components.csv", False)
+#portfolioUtilities.GetTimeSeries("ETF Equity Developed Markets CHF.csv", False)
 # portfolio.GetIsin("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
 # portfolio.TransformToPickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
 data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
-bestPortfolio = portfolio.SelectRandomAssets(data, isin, 5, 5, portfolioStructure)
+bestPortfolio = portfolio.SelectRandomAssets(data, isin, 11, portfolioStructure)
 print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0]))
 portfolio.DisplayResults(bestPortfolio)
 data = portfolio.ReturnDataset(bestPortfolio[0], data[data.index > pd.to_datetime('2022-06-15')])
