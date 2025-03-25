@@ -1,16 +1,14 @@
 import pandas as pd
-import yahooquery as y
-import requests
 import matplotlib.pyplot as plt
-import seaborn as sns
 import yfinance as yf
 import assets
 import os
-
+import seaborn as sns
+import requests
 class PortfolioUtilities():
     def __init__(self):
         if os.name == "nt":
-            self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
+            self.path = "C:/Users/paul.milic/Modern Portfolio/"
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
     def GetAssetsTimeSeries(self, assetComponents, fileName):
