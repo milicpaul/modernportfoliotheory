@@ -9,9 +9,13 @@ import assets
 
 class ModernPortfolioTheory():
     weight_list = []
+    nbOfSimulatedWeights = 0
+    threshold = 0
 
-    def __init__(self, ):
+    def __init__(self, nbOfSimulatedWeights, threshold):
         a = 1
+        self.nbOfSimulatedWeights = nbOfSimulatedWeights
+        self.threshold = threshold
 
     def MoveInSphere(self, w, epsilon=0.009):
         """Déplace w dans une petite boule de rayon epsilon et renormalise."""
@@ -22,16 +26,21 @@ class ModernPortfolioTheory():
         # new_w /= new_w.sum()  # Renormalisation pour que la somme soit 1
         return np.round(new_w, 3)
 
-    def Volatility(self, returns, r, optimization, nbOfRandomWeights, epsilonIncrease, bestWeights):
+    def Volatility(self, returns, r, optimization, epsilonIncrease, bestWeights):
         try:
             weightsList = []
             # Rendement moyen annuel
             mean_returns = returns.mean() * 252  # 252 jours de bourse par an
             # Matrice de covariance annuelle
+            highestSharpe = 0
+            index = 0
             cov_matrix = returns.cov() * 252
+            stop = False
             # Rendement, Volatilité, Sharpe
             # Simulation Monte-Carlo
-            for i in range(nbOfRandomWeights):
+            #for i in range(self.nbOfSimulatedWeights):
+            i = 0
+            while i < self.nbOfSimulatedWeights:
                 # Générer des poids aléatoires qui summent à 1
                 # weights = np.random.dirichlet(np.ones(len(returns.columns)), size=1).flatten()
                 if not optimization:
@@ -44,14 +53,22 @@ class ModernPortfolioTheory():
                 portfolio_volatility = np.sqrt(np.dot(weightsList[-1].T, np.dot(cov_matrix, weightsList[-1])))
                 # Stocker les résultats
                 try:
-                    r[0][0, i] = portfolio_return
-                    r[0][1, i] = portfolio_volatility
-                    r[0][2, i] = portfolio_return / portfolio_volatility
+                    if portfolio_return / portfolio_volatility > highestSharpe:
+                        highestSharpe = portfolio_return / portfolio_volatility
+                        highestReturn = portfolio_return
+                        highestVolatility = portfolio_volatility
+                        print(i)
+                        print(portfolio_return)
+                        print(portfolio_volatility)
+                        print(highestSharpe)
+                        index = i
+                    stop = portfolio_volatility >= self.threshold
+                    i += 1
                 except Exception as b:
                     print("Volatility 1:", b)
         except Exception as a:
             print("Volatility b:", a)
-        return weightsList
+        return weightsList[index], highestReturn, highestVolatility, highestSharpe
 
     def TransformToPickle(self, fileName):
         assets = pd.read_csv(fileName, on_bad_lines="skip", encoding_errors="ignore", sep=";")
@@ -59,10 +76,10 @@ class ModernPortfolioTheory():
 
     def FindInSphere(self, data, weight, nbOfSimulation):
         r = []
-        results = np.zeros((3, nbOfSimulation * 10000))
+        results = np.zeros((3, nbOfSimulation * self.nbOfSimulatedWeights))
         r.append(results)
         for i in range(nbOfSimulation):
-            self.Volatility(data, i * 10000, r, weight, 100000)
+            self.Volatility(data, i * self.nbOfSimulatedWeights, r, weight, self.nbOfSimulatedWeights)
 
     def ReturnDataset(self, portfolio, fullDataset):
         dataSetList = []
@@ -90,6 +107,7 @@ class ModernPortfolioTheory():
         return fullData, assets
 
     def generate_weights(self, n, min_val=0.01, max_val=0.9):
+        return np.random.uniform(0, 1, n)
         alpha = np.ones(n)  # Distribution équilibrée
         vecteur = np.random.dirichlet(alpha, size=1)[0]
         # Transformer les valeurs dans l'intervalle [0.01, 0.9]
@@ -102,13 +120,13 @@ class ModernPortfolioTheory():
         vecteur[indice_max] += erreur
         return np.round(vecteur, 2)
 
-    def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage):
+    def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage, showDensity = True):
         timeSeries = data
         data = data.pct_change()  # .dropna()
         bestPortfolios = []
         for j in range(nbOfSimulation):
             print(f"\rSimulation # : {j+1}", end="", flush=True)
-            results = np.zeros((3, 10000))
+            results = np.zeros((3, self.nbOfSimulatedWeights))
             k = 0
             enoughData = False
             while not enoughData:
@@ -130,18 +148,18 @@ class ModernPortfolioTheory():
                                            currentData.index <= pd.to_datetime('2025-03-15'))]
                 originalData = self.ReturnDataset(portfolio, timeSeries)
                 enoughData = currentData.shape[1] == portfolioLenght
-            weightsList = self.Volatility(currentData, [results], False, 10000, 0, [])
-            maxSharpeId = np.argmax(results[2])
+            weightsList,  highestReturn, highestVolatility, highestSharpe = self.Volatility(currentData, results, False,0, [])
+            if showDensity:
+                pu.PortfolioUtilities.ShowDensity(weightsList)
             bestPortfolios.append(
-                [portfolio, weightsList[maxSharpeId], results[0][maxSharpeId], results[1][maxSharpeId],
-                 results[2][maxSharpeId], currentData, originalData])
+                [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData, originalData])
         return bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])]
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
         bestPortfolios = []
         for i in range(nbOfSimulation):
-            results = np.zeros((3, 10000))
-            newWeightsList = self.Volatility(bestPortfolio[5], [results], True, 10000, i * 0.001, bestPortfolio[1])
+            results = np.zeros((3, self.nbOfSimulatedWeights))
+            newWeightsList = self.Volatility(bestPortfolio[5], [results], True, i * 0.001, bestPortfolio[1])
             maxSharpeId = np.argmax(results[2])
             bestPortfolios.append([[], newWeightsList[maxSharpeId], results[0][maxSharpeId], results[1][maxSharpeId],
                                    results[2][maxSharpeId], []])
@@ -171,19 +189,19 @@ class ModernPortfolioTheory():
 
 
 #portfolioStructure = [["SMI Components.pkl", 5], ["Swiss Shares CHF.pkl", 0], ["Dow Jones.pkl", 0], ["NASDAQ100.pkl", 0], ['ETF Swiss Bonds.pkl', 0]]
-portfolioStructure = [["SMI Mid Components CHF.pkl", 5],
+portfolioStructure = [["SMI Mid Components CHF.pkl", 2],
                       ["ETF Equity Developed Markets CHF.pkl", 0],
-                      ["SMI Components.pkl", 8],
-                      ["ETF Swiss Bonds CHF.pkl", 0],
+                      ["SMI Components.pkl", 2],
+                      ["ETF Swiss Bonds CHF.pkl", 2],
                       ["ETF Swiss Commodities CHF.pkl", 0]]
-portfolio = ModernPortfolioTheory()
+portfolio = ModernPortfolioTheory(10000, 2)
 portfolioUtilities = pu.PortfolioUtilities()
 #portfolioUtilities.GetAssetsTimeSeries(assets.nasdaq_100_tickers, "NASDAQ100.pkl")
 #portfolioUtilities.GetTimeSeries("ETF Equity Developed Markets CHF.csv", False)
 # portfolio.GetIsin("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
 # portfolio.TransformToPickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
 data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
-bestPortfolio = portfolio.SelectRandomAssets(data, isin, 11, portfolioStructure)
+bestPortfolio = portfolio.SelectRandomAssets(data, isin, 50, portfolioStructure, False)
 print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0]))
 portfolio.DisplayResults(bestPortfolio)
 data = portfolio.ReturnDataset(bestPortfolio[0], data[data.index > pd.to_datetime('2022-06-15')])

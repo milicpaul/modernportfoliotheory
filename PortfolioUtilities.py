@@ -5,6 +5,7 @@ import assets
 import os
 import seaborn as sns
 import requests
+import numpy as np
 
 class PortfolioUtilities():
     def __init__(self):
@@ -136,4 +137,33 @@ class PortfolioUtilities():
         plt.tight_layout()
         plt.show()
 
+    @staticmethod
+    def ShowDensity(data):
+        data = np.array(data)
+        num_columns = data.shape[1]
 
+        # Définir les positions verticales pour chaque colonne
+        y_positions = np.arange(1, num_columns + 1)  # 1, 2, 3, ..., num_columns
+
+        plt.figure(figsize=(10, 6))
+
+        # Tracer chaque colonne comme une ligne horizontale et placer les points
+        for i in range(num_columns):
+            plt.scatter(data[:, i], [y_positions[i]] * len(data[:, i]), label=f'Colonne {i + 1}')
+            plt.axhline(y=y_positions[i], color="gray", linestyle="--", alpha=0.5)  # Ligne horizontale
+
+        # Ajustement des axes
+        plt.xlim(0, 1)  # Valeurs en abscisse entre 0 et 1
+        plt.ylim(0, num_columns + 1)  # Ajuster pour voir toutes les lignes
+
+        # Labels et titre
+        plt.xlabel("Valeurs normalisées entre 0 et 1")
+        plt.ylabel("Colonnes")
+        plt.title("Projection des colonnes sur des droites horizontales")
+
+        # Activer la légende et le quadrillage
+        plt.legend()
+        plt.grid(True, linestyle="--", alpha=0.3)
+
+        # Affichage du graphique
+        plt.show()
