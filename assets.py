@@ -1,4 +1,9 @@
 
+
+ETFMSCIWorld = ["FR0014003IY1", "FR0010315770", "IE00BFY0GT14", "IE00B4L5Y983",
+                "IE00BJ0KDQ92", "IE00B4X9L533", "IE00BD4TXV59", "IE00B7KQ7B66",
+                "IE000BI8OT95"]
+
 nasdaq_100_tickers = [
     "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "GOOG", "META", "AVGO", "TSLA", "NFLX",
     "CTSH", "INTU", "ADI", "PYPL", "MXIM", "CHKP", "ISRG", "IDXX", "CTXS", "REGN",

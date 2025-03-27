@@ -13,6 +13,18 @@ class PortfolioUtilities():
             self.path = "C:/Users/paul.milic/Modern Portfolio/"
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
+
+    def FindIsin(self, isin, fileNames):
+        found = [False for _ in range(len(isin))]
+        for i in isin:
+            for f in fileNames:
+                df = pd.read_pickle(self.path + f[0])
+                if i in df.columns.tolist():
+                    found[isin.index(i)] = True
+                    break
+        return found
+
+        return False
     def GetAssetsTimeSeries(self, assetComponents, fileName):
         isinDf = yf.download(assetComponents, start="2015-01-01", end="2025-03-01", interval="1d")
         isinDf = isinDf['Close']
@@ -133,8 +145,11 @@ class PortfolioUtilities():
             ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
                     verticalalignment='top',
                     bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='lightgray'))
+        try:
+            plt.tight_layout()
+        except Exception as a:
+            print(a)
 
-        plt.tight_layout()
         plt.show()
 
     @staticmethod

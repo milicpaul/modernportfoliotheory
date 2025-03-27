@@ -4,6 +4,7 @@ import random
 import os
 import PortfolioUtilities as pu
 import assets
+import importlib.util
 
 # import assets as a
 
@@ -11,9 +12,14 @@ class ModernPortfolioTheory():
     weight_list = []
     nbOfSimulatedWeights = 0
     threshold = 0
+    path = ""
 
     def __init__(self, nbOfSimulatedWeights, threshold):
         a = 1
+        if os.name != "Windows" and os.name != 'nt':
+            self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
+        else:
+            self.path = "C:/Users/paul.milic/Modern Portfolio/"
         self.nbOfSimulatedWeights = nbOfSimulatedWeights
         self.threshold = threshold
 
@@ -26,7 +32,7 @@ class ModernPortfolioTheory():
         # new_w /= new_w.sum()  # Renormalisation pour que la somme soit 1
         return np.round(new_w, 3)
 
-    def Volatility(self, returns, r, optimization, epsilonIncrease, bestWeights):
+    def Volatility(self, returns, optimization, epsilonIncrease, bestWeights):
         try:
             weightsList = []
             # Rendement moyen annuel
@@ -57,10 +63,6 @@ class ModernPortfolioTheory():
                         highestSharpe = portfolio_return / portfolio_volatility
                         highestReturn = portfolio_return
                         highestVolatility = portfolio_volatility
-                        print(i)
-                        print(portfolio_return)
-                        print(portfolio_volatility)
-                        print(highestSharpe)
                         index = i
                     stop = portfolio_volatility >= self.threshold
                     i += 1
@@ -89,15 +91,11 @@ class ModernPortfolioTheory():
         return dataset.sort_index(axis=1)
 
     def BuilHeterogeneousPortfolio(self, fileNames):
-        if os.name != "Windows" and os.name != 'nt':
-            path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
-        else:
-            path = "C:/Users/paul.milic/Modern Portfolio/"
         data = []
         assets = []
         i = 0
         for f in fileNames:
-            localDf = pd.read_pickle(path + f[0])
+            localDf = pd.read_pickle(self.path + f[0])
             localDf = localDf.loc[:, localDf.isna().mean() * 100 < 95]
             localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 95, :]
             assets.append(list(localDf.columns))
@@ -126,7 +124,6 @@ class ModernPortfolioTheory():
         bestPortfolios = []
         for j in range(nbOfSimulation):
             print(f"\rSimulation # : {j+1}", end="", flush=True)
-            results = np.zeros((3, self.nbOfSimulatedWeights))
             k = 0
             enoughData = False
             while not enoughData:
@@ -148,7 +145,7 @@ class ModernPortfolioTheory():
                                            currentData.index <= pd.to_datetime('2025-03-15'))]
                 originalData = self.ReturnDataset(portfolio, timeSeries)
                 enoughData = currentData.shape[1] == portfolioLenght
-            weightsList,  highestReturn, highestVolatility, highestSharpe = self.Volatility(currentData, results, False,0, [])
+            weightsList,  highestReturn, highestVolatility, highestSharpe = self.Volatility(currentData, False,0, [])
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
             bestPortfolios.append(
@@ -158,11 +155,8 @@ class ModernPortfolioTheory():
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
         bestPortfolios = []
         for i in range(nbOfSimulation):
-            results = np.zeros((3, self.nbOfSimulatedWeights))
-            newWeightsList = self.Volatility(bestPortfolio[5], [results], True, i * 0.001, bestPortfolio[1])
-            maxSharpeId = np.argmax(results[2])
-            bestPortfolios.append([[], newWeightsList[maxSharpeId], results[0][maxSharpeId], results[1][maxSharpeId],
-                                   results[2][maxSharpeId], []])
+            weightsList,  highestReturn, highestVolatility, highestSharpe = self.Volatility(bestPortfolio[5], True, i * 0.001, bestPortfolio[1])
+            bestPortfolios.append([[], weightsList, highestReturn, highestVolatility, highestSharpe, bestPortfolio[5], []])
         return bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])]
 
     def GetOptimalPortfolioName(self, nbOfMonteCarloIteration, maxSharpeIdx):
@@ -179,7 +173,7 @@ class ModernPortfolioTheory():
         except Exception as a:
             bestPortfolio[0] = "N/A"
 
-        with open("/Users/paul/Documents/Modern Portfolio Theory Data/Portfolios results.csv", "a") as myFile:
+        with open(self.path + "Portfolios results.csv", "a") as myFile:
             myFile.write(str(bestPortfolio[0]) + ';' +
                          str(bestPortfolio[1]) + ";" +
                          str(round(bestPortfolio[2] * 100, 2)) + ";" +
@@ -187,21 +181,22 @@ class ModernPortfolioTheory():
                          str(round(bestPortfolio[2] / bestPortfolio[3], 4)) + "\n"
                          )
 
-
-#portfolioStructure = [["SMI Components.pkl", 5], ["Swiss Shares CHF.pkl", 0], ["Dow Jones.pkl", 0], ["NASDAQ100.pkl", 0], ['ETF Swiss Bonds.pkl', 0]]
-portfolioStructure = [["SMI Mid Components CHF.pkl", 2],
-                      ["ETF Equity Developed Markets CHF.pkl", 0],
-                      ["SMI Components.pkl", 2],
-                      ["ETF Swiss Bonds CHF.pkl", 2],
-                      ["ETF Swiss Commodities CHF.pkl", 0]]
+portfolioStructure = [["Swiss Shares SMI Mid.pkl", 2],
+                      ["Swiss Shares SMI.pkl", 3],
+                      ["Swiss Shares SMI Expanded.pkl", 2],
+                      ["Dow Jones.pkl", 0],
+                      ["ETF MSCI World.pkl", 3]]
 portfolio = ModernPortfolioTheory(10000, 2)
 portfolioUtilities = pu.PortfolioUtilities()
-#portfolioUtilities.GetAssetsTimeSeries(assets.nasdaq_100_tickers, "NASDAQ100.pkl")
-#portfolioUtilities.GetTimeSeries("ETF Equity Developed Markets CHF.csv", False)
+print(portfolioUtilities.FindIsin(assets.ETFMSCIWorld, portfolioStructure))
+#exit()
+#portfolioUtilities.GetAssetsTimeSeries(assets.ETFMSCIWorld, "ETF MSCI World.pkl")
+#portfolioUtilities.GetAssetsTimeSeries(assets.DowJones, "Dow Jones.pkl")
+#portfolioUtilities.GetTimeSeries("Swiss Index Shares SMI Family.csv", False)
 # portfolio.GetIsin("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
 # portfolio.TransformToPickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
 data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
-bestPortfolio = portfolio.SelectRandomAssets(data, isin, 50, portfolioStructure, False)
+bestPortfolio = portfolio.SelectRandomAssets(data, isin, 10, portfolioStructure, False)
 print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0]))
 portfolio.DisplayResults(bestPortfolio)
 data = portfolio.ReturnDataset(bestPortfolio[0], data[data.index > pd.to_datetime('2022-06-15')])
