@@ -177,7 +177,7 @@ class ModernPortfolioTheory():
             print("Optimal sharpe ratio:", bestPortfolio[2] / bestPortfolio[3])
         except Exception as a:
             bestPortfolio[0] = "N/A"
-        best = " "
+        best = ""
         for b in bestPortfolio[1]:
             best += str(b) + "-"
         with open(self.path + "Portfolios results.csv", "a") as myFile:
