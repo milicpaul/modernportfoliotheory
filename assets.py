@@ -1,3 +1,125 @@
+fonds_obligataires_suisses = [
+    # BCN (CH) - Fonds Durable Revenu - AA
+    "CH0364282449",
+    # BCN (CH) - Fonds Durable Revenu - P
+    "CH0364282472",
+    # BCN (CH) - Fonds Durable Équilibré - AA
+    "CH0364282407",
+    # BCN (CH) - Fonds Durable Équilibré - P
+    "CH0364282431",
+    # BCN (CH) - Fonds Durable Actions Suisses - AA
+    "CH0476513723",
+    # Swisscanto (CH) Bond Fund Corporate H CHF A
+    "CH0002793829",
+    # Pictet-EUR Bonds-HP CHF
+    "LU0130732293",
+    # Pictet-EUR Corporate Bonds-HP CHF
+    "LU0130732376",
+    # Pictet-EUR Government Bonds-HP CHF
+    "LU0130732459",
+    # LO Funds - Swiss Franc Credit Bond (Fgn) (CHF) P A
+    "CH0111959197",
+    # LO Funds II - Swiss Franc Credit Bnd (Foreign) P A
+    "CH0111959262",
+    # Credit Suisse Bond (CH) Corporate Bond CHF A
+    "CH0018919789",
+    # Swisscanto (CH) Bond Fund CHF
+    "CH0002783531"
+]
+
+print(fonds_obligataires_suisses)
+
+FTSE100 = [
+    "GB0000208059",  # 3i Group
+    "GB0002668054",  # Admiral Group
+    "GB0001426513",  # Anglo American
+    "GB00B1VZ0M25",  # Ashtead Group
+    "GB0007980591",  # AstraZeneca
+    "GB0007352749",  # Barclays
+    "GB0009365377",  # Barratt Developments
+    "GB0006821234",  # BHP Group
+    "GB0007075181",  # British American Tobacco
+    "GB0030912577",  # British Land
+    "GB0003130153",  # BT Group
+    "GB00B16QJ758",  # Burberry
+    "GB0031348658",  # Coca-Cola HBC
+    "GB0002246065",  # Diageo
+    "GB00D1FZ5S74",  # Experian
+    "GB0003124606",  # Ferguson
+    "GB0003466265",  # GlaxoSmithKline
+    "GB0008697787",  # Hargreaves Lansdown
+    "GB00B1VZ6K10",  # International Consolidated Airlines Group
+    "GB00B1Z3S375",  # Intertek Group
+    "GB0008363452",  # JD Sports Fashion
+    "GB0004883731",  # John Lewis Partnership
+    "GB0003194696",  # Lloyds Banking Group
+    "GB00B1XH7P31",  # London Stock Exchange Group
+    "GB0005747601",  # Marks and Spencer Group
+    "GB00B6X93J30",  # McDonald's (UK)
+    "GB0002801205",  # Melrose Industries
+    "GB0030980407",  # Mondi
+    "GB00B8Q7J523",  # National Grid
+    "GB00B73Z7C08",  # Next
+    "GB0007980424",  # Pearson
+    "GB0006203802",  # Persimmon
+    "GB0009082303",  # Prudential
+    "GB0007271011",  # Reckitt Benckiser
+    "GB00B09FDX10",  # Rio Tinto
+    "GB0007884795",  # Royal Dutch Shell
+    "GB0007494104",  # RSA Insurance Group
+    "GB00B5B7XQ02",  # Sage Group
+    "GB00B2F2L611",  # Scottish Mortgage Investment Trust
+    "GB0008452820",  # Severn Trent
+    "GB0007272903",  # Smith & Nephew
+    "GB0007885074",  # Standard Chartered
+    "GB00B1VZ9B54",  # Tesco
+    "GB0008871660",  # Unilever
+    "GB0009929885",  # Vodafone Group
+    "GB0003089027",  # Whitbread
+    "GB00B1G9T010",  # WPP
+]
+
+CAC40 = [
+    "AC.PA",  # 3i Group
+    "AI.PA",  # Axa
+    "AIR.PA",  # Airbus
+    "MT.AS",  # ArcelorMittal
+    "AXA.PA",  # AXA
+    "BNP.PA",  # BNP Paribas
+    "EN.PA",  # Danone
+    "CAP.PA",  # Capgemini
+    "CS.PA",  # Crédit Suisse
+    "CA.PA",  # Crédit Agricole
+    "DANO.PA",  # Danone
+    "DSY.PA",  # Dassault Systèmes
+    "EDF.PA",  # EDF
+    "GLE.PA",  # Société Générale
+    "HO.PA",  # Hermès
+    "KER.PA",  # Kering
+    "OR.PA",  # L'Oréal
+    "MC.PA",  # LVMH
+    "MSC.PA",  # Michelin
+    "ORA.PA",  # Orange
+    "PUB.PA",  # Publicis
+    "RNO.PA",  # Renault
+    "SAN.PA",  # Sanofi
+    "SGO.PA",  # Schneider Electric
+    "SCLE.PA",  # Saint-Gobain
+    "SW.PA",  # Safran
+    "STLA.PA",  # Stellantis
+    "STM.PA",  # STMicroelectronics
+    "TEP.PA",  # TotalEnergies
+    "VIV.PA",  # Vivendi
+    "VIE.PA",  # Veolia
+    "LVMH.PA",  # LVMH
+    "ENGI.PA",  # Engie
+    "MR.PA",  # Legrand
+    "RI.PA",  # Pernod Ricard
+    "Kering.PA",  # Kering
+    "CA.PA",  # Crédit Agricole
+    "AD.PA",  # Aéroport de Paris (ADP)
+    "FTSE.PA"  # FTSE 100 (pour l'indice)
+]
 
 
 ETFMSCIWorld = ["FR0014003IY1", "FR0010315770", "IE00BFY0GT14", "IE00B4L5Y983",

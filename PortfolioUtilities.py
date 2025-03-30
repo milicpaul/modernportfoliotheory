@@ -24,7 +24,6 @@ class PortfolioUtilities():
                     break
         return found
 
-        return False
     def GetAssetsTimeSeries(self, assetComponents, fileName):
         isinDf = yf.download(assetComponents, start="2015-01-01", end="2025-03-01", interval="1d")
         isinDf = isinDf['Close']
@@ -44,23 +43,29 @@ class PortfolioUtilities():
 
     def GetTimeSeries(self, fileName, toTicker):
         df = pd.read_csv(self.path + fileName, on_bad_lines='skip', encoding_errors='ignore', sep=";")
-        isin = []
-        for d in df.itertuples(index=False):
-            if toTicker:
-                d = self.isin_to_ticker(d.ISIN, False)
-            isin.append(d.ISIN)
+        isin = df.iloc[:,df.columns.get_loc('ISIN')].tolist()
         isinDf = yf.download(isin, start="2015-01-01", end="2025-03-01", interval="1d")
         isinDf = isinDf.loc[:, isinDf.isna().mean() * 100 < 100]['Close']
         isinDf.to_pickle(self.path + fileName.replace(".csv", ".pkl"))
 
     def ReturnAssetDescription(self, isin):
+        df = pd.read_csv(self.path + "Assets Description.csv", sep=";", index_col=False)
         found = []
         for i in isin:
-            ticker = self.isin_to_ticker(i, True)
-            if ticker != "Ticker introuvable":
-                found.append(ticker)
+            try:
+                description = next(iter(df.loc[df["ISIN"] == i, "Description"].values), None)
+            except Exception as e :
+                print(e)
+            if not description is None:
+                found.append(description)
             else:
-                found.append(i)
+                ticker = self.isin_to_ticker(i, True)
+                if ticker != "Ticker introuvable":
+                    df.loc[len(df)] = [i, ticker]
+                    found.append(ticker)
+                else:
+                    found.append(i)
+        df.to_csv(self.path + "Assets Description.csv", sep=";", index=False)
         return found
 
     def isin_to_ticker(self, isin, name = True):
