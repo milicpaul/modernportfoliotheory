@@ -60,7 +60,6 @@ class ModernPortfolioTheory():
                 i += 1
         except Exception as a:
             print("Volatility error:", a)
-
         return weightsList[index], highestReturn, highestVolatility, highestSharpe
 
     def TransformToPickle(self, fileName):
