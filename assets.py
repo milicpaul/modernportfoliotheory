@@ -27,8 +27,6 @@ fonds_obligataires_suisses = [
     "CH0002783531"
 ]
 
-print(fonds_obligataires_suisses)
-
 FTSE100 = [
     "GB0000208059",  # 3i Group
     "GB0002668054",  # Admiral Group
