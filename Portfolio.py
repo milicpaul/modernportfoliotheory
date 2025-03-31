@@ -110,13 +110,13 @@ class ModernPortfolioTheory():
 
     def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage, showDensity=True):
         thread_id = threading.get_ident()
-        print(f"[Thread {thread_id}] Début de SelectRandomAssets...")
+        print(f"[Thread {thread_id}] Starting SelectRandomAssets...")
         portfolioU = pu.PortfolioUtilities()
         timeSeries = data
         data = data.pct_change()  # .dropna()
         bestPortfolios = []
         for j in range(nbOfSimulation):
-            print(f"\rSimulation # : {j+1}", end="", flush=True)
+            #print(f"\rSimulation # : {j+1}", end="", flush=True  )
             k = 0
             enoughData = False
             while not enoughData:
@@ -142,6 +142,7 @@ class ModernPortfolioTheory():
                 pu.PortfolioUtilities.ShowDensity(weightsList)
             bestPortfolios.append(
                 [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData, originalData])
+        print(f"[Thread {thread_id}] Ending SelectRandomAssets...")
         self.DisplayResults(portfolioU, bestPortfolios[0])
         #return bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])]
 
@@ -200,10 +201,8 @@ portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
 
 
 def select_random_assets_for_pool(args):
-    print("Starting task...")
     portfolio, data, isin, nbOfSimulation, portfolioStructure, showDensity = args
     ret = portfolio.parallel_select_random_assets(portfolio, data, isin, nbOfSimulation, portfolioStructure, showDensity)
-    print("Ending task...")
 
 def main():
     portfolio = ModernPortfolioTheory(10000, 2)
@@ -219,7 +218,6 @@ def main():
     showDensity = False
     #with Pool(multiprocessing.cpu_count()) as pool:
     with Pool(multiprocessing.cpu_count()) as pool:
-        print('démarrage multiprocessing')
         # On passe un tuple avec les arguments nécessaires
         tasks = [(portfolio, data, isin, 10, portfolioStructure, showDensity) for _ in range(multiprocessing.cpu_count())]  # 7 tâches
         bestPortfolio = pool.map(select_random_assets_for_pool, tasks)
