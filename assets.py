@@ -1,4 +1,4 @@
-entreprises_milan = [
+FTSEMIB = [
     'IT0003128367',  # ENEL S.p.A.
     'IT0005239360',  # UniCredit S.p.A.
     'IT0000072618',  # Intesa Sanpaolo S.p.A.
@@ -39,6 +39,50 @@ entreprises_milan = [
     'IT0005495657',  # Saipem S.p.A.
     'IT0001157020',  # ERG S.p.A.
     'IT0005508921',  # Banca Monte dei Paschi di Siena S.p.A.
+]
+
+
+DAX40 = [
+    ("NL0000235190"),  # Airbus SE
+    ("DE0008404005"),  # Allianz SE
+    ("DE000BASF111"),  # BASF SE
+    ("DE000BAY0017"),  # Bayer AG
+    ("DE0005200000"),  # Beiersdorf AG
+    ("DE0005190003"),  # BMW AG
+    ("DE000A1DAHH0"),  # Brenntag SE
+    ("DE000CBK1001"),  # Commerzbank AG
+    ("DE0005439004"),  # Continental AG
+    ("DE0006062144"),  # Covestro AG
+    ("DE000DTR0CK8"),  # Daimler Truck Holding AG
+    ("DE0005140008"),  # Deutsche Bank AG
+    ("DE0005810055"),  # Deutsche Börse AG
+    ("DE0005552004"),  # Deutsche Post AG
+    ("DE0005557508"),  # Deutsche Telekom AG
+    ("DE000ENAG999"),  # E.ON SE
+    ("DE0005785802"),  # Fresenius Medical Care AG
+    ("DE0005785604"),  # Fresenius SE & Co. KGaA
+    ("DE0008402215"),  # Hannover Rück SE
+    ("DE0006047004"),  # Heidelberg Materials AG
+    ("DE000A161408"),  # HelloFresh SE
+    ("DE0006048432"),  # Henkel AG & Co. KGaA
+    ("DE0006231004"),  # Infineon Technologies AG
+    ("DE0007100000"),  # Mercedes-Benz Group AG
+    ("DE0006599905"),  # Merck KGaA
+    ("DE000A0D9PT0"),  # MTU Aero Engines AG
+    ("DE0008430026"),  # Münchener Rückversicherungs-Gesellschaft AG (Munich Re)
+    ("DE000PAG9113"),  # Porsche AG
+    ("DE000PAH0038"),  # Porsche Automobil Holding SE
+    ("NL0012169213"),  # Qiagen N.V.
+    ("DE0007030009"),  # Rheinmetall AG
+    ("DE0007037129"),  # RWE AG
+    ("DE0007164600"),  # SAP SE
+    ("DE0007165631"),  # Sartorius AG
+    ("DE0007236101"),  # Siemens AG
+    ("DE000ENER6Y0"),  # Siemens Energy AG
+    ("DE000SHL1006"),  # Siemens Healthineers AG
+    ("DE000SYM9999"),  # Symrise AG
+    ("DE0007664039"),  # Volkswagen AG
+    ("DE000ZAL1111"),  # Zalando SE
 ]
 
 

@@ -12,8 +12,8 @@ class Parallel():
         with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:  # 4 threads (modifiable)
             futures = []
             # Lancer plusieurs simulations en parallèle
-            for _ in range(nbOfSimulation):
-                future = executor.submit(portfolio.SelectRandomAssets, data, isin, 1, percentage, showDensity)
+            for _ in range(multiprocessing.cpu_count()):
+                future = executor.submit(portfolio.SelectRandomAssets, data, isin, nbOfSimulation, percentage, showDensity)
                 futures.append(future)
 
             # Récupération des résultats au fur et à mesure
