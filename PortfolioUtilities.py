@@ -6,14 +6,16 @@ import os
 import seaborn as sns
 import requests
 import numpy as np
+import threading
 
 class PortfolioUtilities():
+    cvsLock = threading.Lock()
     def __init__(self):
         if os.name == "nt":
             self.path = "C:/Users/paul.milic/Modern Portfolio/"
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
-
+        self.df = pd.read_csv(self.path + "Assets Description.csv", sep=";", index_col=False)
     def FindIsin(self, isin, fileNames):
         found = [False for _ in range(len(isin))]
         for i in isin:
@@ -31,7 +33,6 @@ class PortfolioUtilities():
 
     def GetTicker(self, component):
         spy = yf.Ticker("SPY")
-        print(spy.holdings)
         dow = yf.Ticker("^DJI")
         dow_tickers = dow.history_metadata.get("symbols", [])
 
@@ -49,23 +50,21 @@ class PortfolioUtilities():
         isinDf.to_pickle(self.path + fileName.replace(".csv", ".pkl"))
 
     def ReturnAssetDescription(self, isin):
-        df = pd.read_csv(self.path + "Assets Description.csv", sep=";", index_col=False)
         found = []
         for i in isin:
             try:
-                description = next(iter(df.loc[df["ISIN"] == i, "Description"].values), None)
-            except Exception as e :
+                description = next(iter(self.df.loc[self.df["ISIN"] == i, "Description"].values), None)
+            except Exception as e:
                 print(e)
             if not description is None:
                 found.append(description)
             else:
                 ticker = self.isin_to_ticker(i, True)
                 if ticker != "Ticker introuvable":
-                    df.loc[len(df)] = [i, ticker]
+                    self.df.loc[len(self.df)] = [i, ticker]
                     found.append(ticker)
                 else:
                     found.append(i)
-        df.to_csv(self.path + "Assets Description.csv", sep=";", index=False)
         return found
 
     def isin_to_ticker(self, isin, name = True):

@@ -7,7 +7,7 @@ import assets
 from multiprocessing import Pool
 import multiprocessing
 import threading
-
+import ParallelComputing
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -104,17 +104,13 @@ class ModernPortfolioTheory():
         vecteur[indice_max] += erreur
         return np.round(vecteur, 2)
 
-    @staticmethod
-    def parallel_select_random_assets(instance, data, isin, nbOfSimulation, percentage, showDensity):
-        instance.SelectRandomAssets(data, isin, nbOfSimulation, percentage, showDensity)
-
     def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage, showDensity=True):
         thread_id = threading.get_ident()
-        print(f"[Thread {thread_id}] Début de SelectRandomAssets...")
         portfolioU = pu.PortfolioUtilities()
         timeSeries = data
         data = data.pct_change()  # .dropna()
         bestPortfolios = []
+
         for j in range(nbOfSimulation):
             print(f"\rSimulation # : {j+1}", end="", flush=True)
             k = 0
@@ -142,8 +138,7 @@ class ModernPortfolioTheory():
                 pu.PortfolioUtilities.ShowDensity(weightsList)
             bestPortfolios.append(
                 [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData, originalData])
-        self.DisplayResults(portfolioU, bestPortfolios[0])
-        #return bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])]
+        return bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])]
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
         bestPortfolios = []
@@ -198,13 +193,6 @@ portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
                       #["Swiss Bonds.pkl", 1]
 ]
 
-
-def select_random_assets_for_pool(args):
-    print("Starting task...")
-    portfolio, data, isin, nbOfSimulation, portfolioStructure, showDensity = args
-    ret = portfolio.parallel_select_random_assets(portfolio, data, isin, nbOfSimulation, portfolioStructure, showDensity)
-    print("Ending task...")
-
 def main():
     portfolio = ModernPortfolioTheory(10000, 2)
     portfolioUtilities = pu.PortfolioUtilities()
@@ -218,13 +206,8 @@ def main():
     data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
     showDensity = False
     #with Pool(multiprocessing.cpu_count()) as pool:
-    with Pool(multiprocessing.cpu_count()) as pool:
-        print('démarrage multiprocessing')
-        # On passe un tuple avec les arguments nécessaires
-        tasks = [(portfolio, data, isin, 10, portfolioStructure, showDensity) for _ in range(multiprocessing.cpu_count())]  # 7 tâches
-        bestPortfolio = pool.map(select_random_assets_for_pool, tasks)
-        print('fin multiprocessing')
-    #bestPortfolio = portfolio.SelectRandomAssets(data, isin, 1, portfolioStructure, False)
+    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 10, portfolioStructure, showDensity, portfolioUtilities)
+    portfolio.DisplayResults(portfolioUtilities, bestPortfolios)
     exit()
     print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0][0]))
     data = portfolio.ReturnDataset(bestPortfolio[0], data[data.index > pd.to_datetime('2022-06-15')])
@@ -233,6 +216,8 @@ def main():
     portfolioUtilities.plot_series_temporelles(data, bestPortfolio[2]/bestPortfolio[3], bestPortfolio[2], bestPortfolio[3], portfolioPerformance)
     bestPortfolio = portfolio.FindMaximum(bestPortfolio, 2)
     portfolio.DisplayResults(bestPortfolio)
+    portfolioUtilies.df.to_csv(pUtilities.path + "Assets Description.csv", sep=";", index=False)
+
     print(1)
 
 if __name__ == '__main__':
