@@ -221,7 +221,6 @@ def main():
         # On passe un tuple avec les arguments nécessaires
         tasks = [(portfolio, data, isin, 10, portfolioStructure, showDensity) for _ in range(multiprocessing.cpu_count())]  # 7 tâches
         bestPortfolio = pool.map(select_random_assets_for_pool, tasks)
-        print('fin multiprocessing')
     #bestPortfolio = portfolio.SelectRandomAssets(data, isin, 1, portfolioStructure, False)
     exit()
     print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0][0]))
