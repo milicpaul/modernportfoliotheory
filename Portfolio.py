@@ -188,6 +188,7 @@ portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
                       ["Swiss Shares SMI Expanded.pkl", 0],
                       #["Dow Jones.pkl", 5],
                       ["ETF MSCI World.pkl", 2],
+                      ["FTSE Mib.pkl", 5],
                       #["CAC 40.pkl", 3],
                       #["Swiss Bonds.pkl", 1]
 ]
@@ -198,13 +199,12 @@ def main():
     #portfolio.FindBestPortfolio(portfolioStructure)
     #print(portfolioUtilities.FindIsin(assets.ETFMSCIWorld, portfolioStructure))
     #.GetAssetsTimeSeries(assets.fonds_obligataires_suisses, "Swiss Bonds.pkl")
-    #portfolioUtilities.GetAssetsTimeSeries(assets.DowJones, "Dow Jones.pkl")
+    #portfolioUtilities.GetAssetsTimeSeries(assets.entreprises_milan, "FTSE Mib.pkl")
     #portfolioUtilities.GetTimeSeries("Swiss Shares SMI Mid.csv", False)
     # portfolio.GetIsin("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
     # portfolio.TransformToPickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
     data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
     showDensity = False
-    #with Pool(multiprocessing.cpu_count()) as pool:
     bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 10, portfolioStructure, showDensity, portfolioUtilities)
     portfolio.DisplayResults(portfolioUtilities, bestPortfolios)
     exit()

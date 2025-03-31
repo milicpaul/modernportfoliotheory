@@ -1,3 +1,47 @@
+entreprises_milan = [
+    'IT0003128367',  # ENEL S.p.A.
+    'IT0005239360',  # UniCredit S.p.A.
+    'IT0000072618',  # Intesa Sanpaolo S.p.A.
+    'NL0011585146',  # Ferrari N.V.
+    'NL00150001Q9',  # Stellantis N.V.
+    'IT0003132476',  # Eni S.p.A.
+    'NL0000226223',  # STMicroelectronics N.V.
+    'IT0000062072',  # Generali
+    'IT0004965148',  # Moncler S.p.A.
+    'NL0010545661',  # CNH Industrial N.V.
+    'IT0003242622',  # Terna S.p.A.
+    'IT0003153415',  # Snam S.p.A.
+    'IT0004176001',  # Prysmian S.p.A.
+    'IT0000072170',  # FinecoBank S.p.A.
+    'IT0000062957',  # Mediobanca S.p.A.
+    'LU0156801721',  # Tenaris
+    'IT0005218380',  # Banco BPM S.p.A.
+    'NL0015435975',  # Davide Campari-Milano N.V.
+    'IT0003856405',  # Leonardo S.p.A.
+    'IT0003796171',  # Poste Italiane S.p.A.
+    'IT0003828271',  # Recordati
+    'IT0005090300',  # Inwit S.p.A.
+    'IT0004056880',  # Amplifon S.p.A.
+    'IT0001078911',  # Interpump Group S.p.A.
+    'IT0005366767',  # Nexi S.p.A.
+    'IT0003497168',  # Telecom Italia S.p.A.
+    'IT0000066123',  # BPER Banca S.p.A.
+    'IT0001233417',  # A2A S.p.A.
+    'IT0005211237',  # Italgas S.p.A.
+    'IT0003261697',  # Azimut Holding S.p.A.
+    'IT0005278236',  # Pirelli & C. S.p.A.
+    'IT0004810054',  # Unipol Gruppo S.p.A.
+    'IT0001250932',  # Hera S.p.A.
+    'IT0003492391',  # DiaSorin S.p.A.
+    'IT0004776628',  # Banca Mediolanum S.p.A.
+    'IT0001031084',  # Banca Generali S.p.A.
+    'NL0015000LU4',  # Iveco Group N.V.
+    'IT0005495657',  # Saipem S.p.A.
+    'IT0001157020',  # ERG S.p.A.
+    'IT0005508921',  # Banca Monte dei Paschi di Siena S.p.A.
+]
+
+
 fonds_obligataires_suisses = [
     # BCN (CH) - Fonds Durable Revenu - AA
     "CH0364282449",
