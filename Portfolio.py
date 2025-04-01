@@ -6,7 +6,7 @@ import PortfolioUtilities as pu
 import multiprocessing
 import threading
 import ParallelComputing
-from numba import jit
+import KellyPortfolio as k
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -105,8 +105,6 @@ class ModernPortfolioTheory():
         return np.round(vecteur, 2)
 
     def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage, showDensity=True):
-        thread_id = threading.get_ident()
-        portfolioU = pu.PortfolioUtilities()
         timeSeries = data
         data = data.pct_change(fill_method=None)  # .dropna()
         bestPortfolios = []
@@ -184,18 +182,19 @@ class ModernPortfolioTheory():
                          str(round(bestPortfolio[2] / bestPortfolio[3], 4)) + "\n"
                          )
 
-portfolioStructure = [["Swiss Shares SMI Mid.pkl", 3],
-                      ["Swiss Shares SMI.pkl", 2],
+portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
+                      ["Swiss Shares SMI.pkl", 0],
                       ["Swiss Shares SMI Expanded.pkl", 0],
                       #["Dow Jones.pkl", 5],
                       ["ETF MSCI World.pkl", 0],
-                      ["FTSE Mib.pkl", 5],
+                      ["FTSE Mib.pkl", 0],
                       #["CAC 40.pkl", 3],
-                      ["Swiss Bonds.pkl", 0],
-                      ["DAX40.pkl", 5]
+                      #["Swiss Bonds.pkl", 0],
+                      #["DAX40.pkl", 5]
 ]
 
 def main():
+    kelly = k.KellyCriterion()
     portfolio = ModernPortfolioTheory(10000, 2, 4)
     portfolioUtilities = pu.PortfolioUtilities()
     #portfolio.FindBestPortfolio(portfolioStructure)
@@ -207,8 +206,9 @@ def main():
     # portfolio.TransformToPickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
     data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
     showDensity = False
-    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 10, portfolioStructure, showDensity, portfolioUtilities)
+    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, portfolioUtilities)
     portfolio.DisplayResults(portfolioUtilities, bestPortfolios)
+    print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns)
     portfolioUtilities.df.to_csv(portfolioUtilities.path + "Assets Description.csv", sep=";", index=False)
     exit()
     print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0][0]))
