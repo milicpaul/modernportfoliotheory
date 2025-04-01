@@ -7,6 +7,7 @@ import multiprocessing
 import threading
 import ParallelComputing
 import KellyPortfolio as k
+import RobustPortfolio as rb
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -195,6 +196,7 @@ portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
 
 def main():
     kelly = k.KellyCriterion()
+    robust = rb.RobustPortfolio()
     portfolio = ModernPortfolioTheory(10000, 2, 4)
     portfolioUtilities = pu.PortfolioUtilities()
     #portfolio.FindBestPortfolio(portfolioStructure)
@@ -209,6 +211,7 @@ def main():
     bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, portfolioUtilities)
     portfolio.DisplayResults(portfolioUtilities, bestPortfolios)
     print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns)
+    print("Robust:", robust.RobustPortfolio(bestPortfolios[5]))
     portfolioUtilities.df.to_csv(portfolioUtilities.path + "Assets Description.csv", sep=";", index=False)
     exit()
     print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0][0]))
