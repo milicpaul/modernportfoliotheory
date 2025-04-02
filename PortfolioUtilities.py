@@ -7,7 +7,7 @@ import seaborn as sns
 import requests
 import numpy as np
 import threading
-
+import sys
 class PortfolioUtilities():
     cvsLock = threading.Lock()
     def __init__(self):
@@ -186,3 +186,29 @@ class PortfolioUtilities():
 
         # Affichage du graphique
         plt.show()
+
+    def DisplayResults(self, instance, bestPortfolio):
+        try:
+            print('')
+            print("Optimal portfolio:", bestPortfolio[0])
+            print("Optima name", ",".join(instance.ReturnAssetDescription(bestPortfolio[0])) )
+            print("Optimal weight:", bestPortfolio[1])
+            print("Optimal return", bestPortfolio[2] * 100)
+            print("Optimal volatility:", bestPortfolio[3] * 100)
+            print("Optimal sharpe ratio:", bestPortfolio[2] / bestPortfolio[3])
+        except Exception as a:
+            bestPortfolio[0] = "N/A"
+        best = " "
+        for b in bestPortfolio[1]:
+            best += str(b) + "-"
+        with open(self.path + "Portfolios results.csv", "a") as myFile:
+            myFile.write(",".join(bestPortfolio[0]) + ';' +
+                         ",".join(instance.ReturnAssetDescription(bestPortfolio[0])) + ";" +
+                         best[:-1] + ";" +
+                         str(round(bestPortfolio[2] * 100, 2)) + ";" +
+                         str(bestPortfolio[3] * 100) + ';' +
+                         str(round(bestPortfolio[2] / bestPortfolio[3], 4)) + "\n"
+                         )
+
+
+print(sys.executable)

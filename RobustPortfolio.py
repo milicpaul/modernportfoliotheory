@@ -29,9 +29,9 @@ class RobustPortfolio():
         expected_return = mu_robust @ w  # Rendement espéré
 
         # Contraintes : somme des poids = 1 et pas de vente à découvert
-        constraints = [cp.sum(w) == 1, w >= 0]
+        constraints = [cp.sum(w) == 1, w >= 0.01]
 
         # Résolution du problème robuste
         prob = cp.Problem(cp.Minimize(risk), constraints)
         prob.solve()
-        return w.value, np.sqrt(risk.value)
+        return np.round(w.value, 2), np.sqrt(risk.value)

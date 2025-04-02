@@ -8,6 +8,8 @@ import threading
 import ParallelComputing
 import KellyPortfolio as k
 import RobustPortfolio as rb
+import sys
+import LoadData
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -158,30 +160,8 @@ class ModernPortfolioTheory():
             data, isin = self.BuilHeterogeneousPortfolio(fullPortfolio)
             bestPortfolio = self.SelectRandomAssets(data, isin, 10, portfolioStructure, False)
             print(pu.ReturnAssetDescription(bestPortfolio[0]))
-            self.DisplayResults(bestPortfolio)
+            #self.DisplayResults(bestPortfolio)
 
-    def DisplayResults(self, instance, bestPortfolio):
-        try:
-            print('')
-            print("Optimal portfolio:", bestPortfolio[0])
-            print("Optima name", ",".join(instance.ReturnAssetDescription(bestPortfolio[0])) )
-            print("Optimal weight:", bestPortfolio[1])
-            print("Optimal return", bestPortfolio[2] * 100)
-            print("Optimal volatility:", bestPortfolio[3] * 100)
-            print("Optimal sharpe ratio:", bestPortfolio[2] / bestPortfolio[3])
-        except Exception as a:
-            bestPortfolio[0] = "N/A"
-        best = " "
-        for b in bestPortfolio[1]:
-            best += str(b) + "-"
-        with open(self.path + "Portfolios results.csv", "a") as myFile:
-            myFile.write(",".join(bestPortfolio[0]) + ';' +
-                         ",".join(instance.ReturnAssetDescription(bestPortfolio[0])) + ";" +
-                         best[:-1] + ";" +
-                         str(round(bestPortfolio[2] * 100, 2)) + ";" +
-                         str(bestPortfolio[3] * 100) + ';' +
-                         str(round(bestPortfolio[2] / bestPortfolio[3], 4)) + "\n"
-                         )
 
 portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
                       ["Swiss Shares SMI.pkl", 0],
@@ -189,6 +169,7 @@ portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
                       #["Dow Jones.pkl", 5],
                       ["ETF MSCI World.pkl", 0],
                       ["FTSE Mib.pkl", 0],
+                      ["DAX40.pkl", 2]
                       #["CAC 40.pkl", 3],
                       #["Swiss Bonds.pkl", 0],
                       #["DAX40.pkl", 5]
@@ -200,17 +181,11 @@ def main():
     portfolio = ModernPortfolioTheory(10000, 2, 4)
     portfolioUtilities = pu.PortfolioUtilities()
     #portfolio.FindBestPortfolio(portfolioStructure)
-    #print(portfolioUtilities.FindIsin(assets.ETFMSCIWorld, portfolioStructure))
-    #.GetAssetsTimeSeries(assets.fonds_obligataires_suisses, "Swiss Bonds.pkl")
-    #portfolioUtilities.GetAssetsTimeSeries(assets.DAX40, "DAX40.pkl")
-    #portfolioUtilities.GetTimeSeries("Swiss Shares SMI Mid.csv", False)
-    # portfolio.GetIsin("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
-    # portfolio.TransformToPickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.csv")
     data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
     showDensity = False
     bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, portfolioUtilities)
-    portfolio.DisplayResults(portfolioUtilities, bestPortfolios)
-    print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns)
+    portfolioUtilities.DisplayResults(portfolioUtilities, bestPortfolios)
+    print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)
     print("Robust:", robust.RobustPortfolio(bestPortfolios[5]))
     portfolioUtilities.df.to_csv(portfolioUtilities.path + "Assets Description.csv", sep=";", index=False)
     exit()
@@ -220,12 +195,13 @@ def main():
     portfolioPerformance = np.sum(bestPortfolio[1] * (data2.mean() * 252))
     portfolioUtilities.plot_series_temporelles(data, bestPortfolio[2]/bestPortfolio[3], bestPortfolio[2], bestPortfolio[3], portfolioPerformance)
     bestPortfolio = portfolio.FindMaximum(bestPortfolio, 2)
-    portfolio.DisplayResults(bestPortfolio)
+    portfolioStructure.DisplayResults(bestPortfolio)
     portfolioUtilies.df.to_csv(pUtilities.path + "Assets Description.csv", sep=";", index=False)
     print(portfolioUtilities.newIsin)
 
     print(1)
 
 if __name__ == '__main__':
+    print(sys.executable)
     multiprocessing.freeze_support()  # Nécessaire si tu crées un exécutable avec PyInstaller
     main()
