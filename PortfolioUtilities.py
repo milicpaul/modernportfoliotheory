@@ -8,6 +8,7 @@ import requests
 import numpy as np
 import threading
 import sys
+
 class PortfolioUtilities():
     cvsLock = threading.Lock()
     def __init__(self):
@@ -209,6 +210,17 @@ class PortfolioUtilities():
                          str(bestPortfolio[3] * 100) + ';' +
                          str(round(bestPortfolio[2] / bestPortfolio[3], 4)) + "\n"
                          )
+
+    def ReturnDataset(self, portfolio, fullDataset):
+        dataSetList = []
+        for p in portfolio:
+            dataSetList.append(fullDataset[[p]])
+        dataset = pd.concat(dataSetList, axis=1)
+        return dataset.sort_index(axis=1)
+
+    def TransformToPickle(self, fileName):
+        assets = pd.read_csv(fileName, on_bad_lines="skip", encoding_errors="ignore", sep=";")
+        assets.to_pickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.pkl")
 
 
 print(sys.executable)

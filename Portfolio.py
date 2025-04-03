@@ -66,23 +66,12 @@ class ModernPortfolioTheory():
             print("Volatility error:", a)
         return weightsList[index], highestReturn, highestVolatility, highestSharpe
 
-    def TransformToPickle(self, fileName):
-        assets = pd.read_csv(fileName, on_bad_lines="skip", encoding_errors="ignore", sep=";")
-        assets.to_pickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.pkl")
-
     def FindInSphere(self, data, weight, nbOfSimulation):
         r = []
         results = np.zeros((3, nbOfSimulation * self.nbOfSimulatedWeights))
         r.append(results)
         for i in range(nbOfSimulation):
             self.Volatility(data, i * self.nbOfSimulatedWeights, r, weight, self.nbOfSimulatedWeights)
-
-    def ReturnDataset(self, portfolio, fullDataset):
-        dataSetList = []
-        for p in portfolio:
-            dataSetList.append(fullDataset[[p]])
-        dataset = pd.concat(dataSetList, axis=1)
-        return dataset.sort_index(axis=1)
 
     def BuilHeterogeneousPortfolio(self, fileNames):
         data = []
@@ -129,10 +118,10 @@ class ModernPortfolioTheory():
                     portfolioLenght += quantity
                     k += 1
                 k = 0
-                currentData = self.ReturnDataset(portfolio, data)
+                currentData = data[portfolio]
                 currentData = currentData[(currentData.index >= pd.to_datetime('2022-06-15')) & (
                                            currentData.index <= pd.to_datetime('2025-03-15'))]
-                originalData = self.ReturnDataset(portfolio, timeSeries)
+                originalData = timeSeries[portfolio]
                 enoughData = currentData.shape[1] == portfolioLenght
             weightsList, highestReturn, highestVolatility, highestSharpe = self.Volatility(currentData, False, 0, [])
             if showDensity:
@@ -186,12 +175,12 @@ def main():
     bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, portfolioUtilities)
     portfolioUtilities.DisplayResults(portfolioUtilities, bestPortfolios)
     print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)
-    print("Robust:", robust.RobustPortfolio(bestPortfolios[5]))
+    print("Robust:", robust.RobustPortfolio(bestPortfolios[5], False))
     portfolioUtilities.df.to_csv(portfolioUtilities.path + "Assets Description.csv", sep=";", index=False)
     exit()
     print(portfolioUtilities.ReturnAssetDescription(bestPortfolio[0][0]))
-    data = portfolio.ReturnDataset(bestPortfolio[0], data[data.index > pd.to_datetime('2022-06-15')])
-    data2 = data.pct_change(fill_method=None)
+    data = data[bestPortfolio[0]]
+    data = data[data.index > pd.to_datetime('2022-06-15')].pct_change(fill_method=None)
     portfolioPerformance = np.sum(bestPortfolio[1] * (data2.mean() * 252))
     portfolioUtilities.plot_series_temporelles(data, bestPortfolio[2]/bestPortfolio[3], bestPortfolio[2], bestPortfolio[3], portfolioPerformance)
     bestPortfolio = portfolio.FindMaximum(bestPortfolio, 2)

@@ -10,9 +10,10 @@ class KellyCriterion():
     def kelly_criterion(self, weights, mean_returns, cov_matrix, risk_free_rate):
         portfolio_return = np.dot(weights, mean_returns) - risk_free_rate
         portfolio_variance = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-        self.returns = portfolio_return
-        self.variance = portfolio_variance
+        self.returns = portfolio_return * 100
+        self.variance = portfolio_variance * 100
         return - portfolio_return / portfolio_variance # On minimise l'inverse
+
     def SolveKellyCriterion(self, returns, n_assets):
         # Contraintes : somme des poids = 1
         constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
