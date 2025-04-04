@@ -10,6 +10,7 @@ import KellyPortfolio as k
 import RobustPortfolio as rb
 import sys
 import LoadData
+import BrownianMotion as br
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -103,26 +104,14 @@ class ModernPortfolioTheory():
 
         for j in range(nbOfSimulation):
             print(f"\rSimulation # : {j+1}", end="", flush=True)
-            k = 0
             enoughData = False
             while not enoughData:
-                portfolio = []  # random portfolio
-                portfolioLenght = 0
-                for p in percentage:
-                    if len(isin[k]) < percentage[k][1]:
-                        quantity = len(isin[k])
-                    else:
-                        quantity = percentage[k][1]
-                    indices = [random.choices(range(len(isin[k])), k=percentage[k][1]) for k in range(len(percentage))]
-                    portfolio = [isin[k][i] for k, idx in enumerate(indices) for i in idx]
-                    portfolioLenght += quantity
-                    k += 1
-                k = 0
+                portfolio, portfolioLength = pu.PortfolioUtilities.ReturnRandomPortfolio(percentage, isin)
                 currentData = data[portfolio]
                 currentData = currentData[(currentData.index >= pd.to_datetime('2022-06-15')) & (
                                            currentData.index <= pd.to_datetime('2025-03-15'))]
                 originalData = timeSeries[portfolio]
-                enoughData = currentData.shape[1] == portfolioLenght
+                enoughData = currentData.shape[1] == portfolioLength
             weightsList, highestReturn, highestVolatility, highestSharpe = self.Volatility(currentData, False, 0, [])
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
@@ -163,7 +152,6 @@ portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
                       #["Swiss Bonds.pkl", 0],
                       #["DAX40.pkl", 5]
 ]
-
 def main():
     kelly = k.KellyCriterion()
     robust = rb.RobustPortfolio()
@@ -172,6 +160,10 @@ def main():
     #portfolio.FindBestPortfolio(portfolioStructure)
     data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
     showDensity = False
+    portfolio = portfolioUtilities.ReturnRandomPortfolio(portfolioStructure, isin)
+    brownian = br.BrownianMotion(portfolioUtilities.ReturnDataset(portfolio, data))
+    brownian.Simulate(252, 1000)
+
     bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, portfolioUtilities)
     portfolioUtilities.DisplayResults(portfolioUtilities, bestPortfolios)
     print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)

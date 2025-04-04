@@ -8,6 +8,7 @@ import requests
 import numpy as np
 import threading
 import sys
+import random
 
 class PortfolioUtilities():
     cvsLock = threading.Lock()
@@ -221,6 +222,22 @@ class PortfolioUtilities():
     def TransformToPickle(self, fileName):
         assets = pd.read_csv(fileName, on_bad_lines="skip", encoding_errors="ignore", sep=";")
         assets.to_pickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.pkl")
+
+    def ReturnRandomPortfolio(self, percentage, isin):
+        k = 0
+        portfolio = []  # random portfolio
+        portfolioLenght = 0
+        for p in percentage:
+            if len(isin[k]) < percentage[k][1]:
+                quantity = len(isin[k])
+            else:
+                quantity = percentage[k][1]
+            indices = [random.choices(range(len(isin[k])), k=percentage[k][1]) for k in range(len(percentage))]
+            portfolio = [isin[k][i] for k, idx in enumerate(indices) for i in idx]
+            portfolioLenght += quantity
+            k += 1
+        k = 0
+        return portfolio, portfolioLenght
 
 
 print(sys.executable)
