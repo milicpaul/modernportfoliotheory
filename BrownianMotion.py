@@ -18,7 +18,7 @@ class BrownianMotion():
         self.rendements_moyens = prix_initials.mean()
         self.correlations = prix_initials.corr()
         self.volatilites = prix_initials.std()
-
+        #tt
 
 # 🔹 Simulation des trajectoires corrélées des actifs
     def simulate_geometric_brownian_motion_corr(self, S0, mu, L, T, N, n_simulations):
