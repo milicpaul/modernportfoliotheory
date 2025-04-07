@@ -18,6 +18,15 @@ class PortfolioUtilities():
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
         self.df = pd.read_csv(self.path + "Assets Description.csv", sep=";", index_col=False)
+
+    def DisplayIsin(self, portfolioStructure):
+        df = pd.DataFrame()
+        for p in portfolioStructure:
+            df = pd.read_pickle(self.path + p[0])
+            for c in df.columns:
+                print(c, self.ReturnAssetDescription([c])[0])
+        self.df.to_csv(self.path + "Assets Description.csv", sep=";")
+
     def FindIsin(self, isin, fileNames):
         found = [False for _ in range(len(isin))]
         for i in isin:
@@ -98,65 +107,69 @@ class PortfolioUtilities():
         :param ylabel: Étiquette de l'axe des y.
         :param log_scale: Booléen pour activer l'échelle logarithmique sur l'axe Y.
         """
-
-        # Vérifier que l'index est bien en datetime
-        if not isinstance(df.index, pd.DatetimeIndex):
-            raise ValueError("L'index du DataFrame doit être de type datetime.")
-
-        # Style et figure
-        sns.set(style="darkgrid")
-        fig, ax = plt.subplots(figsize=(12, 6))
-
-        # Tracer chaque série et ajouter un label à gauche et à droite
-        for col in df.columns:
-            ax.plot(df.index, df[col], label=col)
-
-            # Ajouter un label à la fin de chaque courbe
-            last_value = df[col].iloc[-1]  # Dernière valeur de la série
-            last_date = df.index[-1]  # Dernière date
-            ax.text(last_date, last_value, col, fontsize=12, verticalalignment='center',
-                    horizontalalignment='left',
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
-
-            # Ajouter un label au début de chaque courbe
-            first_value = df[col].iloc[0]  # Première valeur de la série
-            first_date = df.index[0]  # Première date
-            ax.text(first_date, first_value, col, fontsize=12, verticalalignment='center',
-                    horizontalalignment='right',
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
-
-        # Personnalisation du graphique
-        ax.set_title(title, fontsize=14)
-        ax.set_xlabel(xlabel, fontsize=12)
-        ax.set_ylabel(ylabel, fontsize=12)
-        plt.xticks(rotation=45)
-
-        # Activer l'échelle logarithmique si demandé
-        if log_scale:
-            ax.set_yscale("log")
-
-        # Ajouter des annotations pour les indicateurs financiers
-        info_text = ""
-        if sharpe_ratio is not None:
-            info_text += f"Ratio de Sharpe: {sharpe_ratio:.2f}\n\n"
-        if rendement is not None:
-            info_text += f"Rendement: {rendement*100:.2f}%\n\n"
-        if volatilite is not None:
-            info_text += f"Volatilité: {volatilite*100:.2f}%\n\n"
-        if performance is not None:
-            info_text += f"Performance: {performance*100:.2f}%"
-
-        if info_text:
-            # Ajouter un encadré de texte sur le graphique
-            ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
-                    verticalalignment='top',
-                    bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='lightgray'))
         try:
-            plt.tight_layout()
-        except Exception as a:
-            print(a)
+            df = df[df['Date'] >= '2015-01-01']
+            # Vérifier que l'index est bien en datetime
+            if not isinstance(df.index, pd.DatetimeIndex):
+                raise ValueError("L'index du DataFrame doit être de type datetime.")
 
-        plt.show()
+            # Style et figure
+            sns.set(style="darkgrid")
+            fig, ax = plt.subplots(figsize=(12, 6))
+
+            # Tracer chaque série et ajouter un label à gauche et à droite
+            for col in df.columns:
+                ax.plot(df.index, df[col], label=col)
+
+                # Ajouter un label à la fin de chaque courbe
+                last_value = df[col].iloc[-1]  # Dernière valeur de la série
+                last_date = df.index[-1]  # Dernière date
+                ax.text(last_date, last_value, col, fontsize=12, verticalalignment='center',
+                        horizontalalignment='left',
+                        bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
+
+                # Ajouter un label au début de chaque courbe
+                first_value = df[col].iloc[0]  # Première valeur de la série
+                first_date = df.index[0]  # Première date
+                ax.text(first_date, first_value, col, fontsize=12, verticalalignment='center',
+                        horizontalalignment='right',
+                        bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
+
+            # Personnalisation du graphique
+            ax.set_title(title, fontsize=14)
+            ax.set_xlabel(xlabel, fontsize=12)
+            ax.set_ylabel(ylabel, fontsize=12)
+            plt.xticks(rotation=45)
+
+            # Activer l'échelle logarithmique si demandé
+            if log_scale:
+                ax.set_yscale("log")
+
+            # Ajouter des annotations pour les indicateurs financiers
+            info_text = ""
+            if sharpe_ratio is not None:
+                info_text += f"Ratio de Sharpe: {sharpe_ratio:.2f}\n\n"
+            if rendement is not None:
+                info_text += f"Rendement: {rendement*100:.2f}%\n\n"
+            if volatilite is not None:
+                info_text += f"Volatilité: {volatilite*100:.2f}%\n\n"
+            if performance is not None:
+                info_text += f"Performance: {performance*100:.2f}%"
+
+            if info_text:
+                # Ajouter un encadré de texte sur le graphique
+                ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
+                        verticalalignment='top',
+                        bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='lightgray'))
+            try:
+                plt.tight_layout()
+            except Exception as a:
+                print(a)
+
+            plt.show()
+        except Exception as e:
+            print(e)
+
 
     @staticmethod
     def ShowDensity(data):
@@ -213,11 +226,7 @@ class PortfolioUtilities():
                          )
 
     def ReturnDataset(self, portfolio, fullDataset):
-        dataSetList = []
-        for p in portfolio:
-            dataSetList.append(fullDataset[[p]])
-        dataset = pd.concat(dataSetList, axis=1)
-        return dataset.sort_index(axis=1)
+        return fullDataset[list(portfolio)[0]]
 
     def TransformToPickle(self, fileName):
         assets = pd.read_csv(fileName, on_bad_lines="skip", encoding_errors="ignore", sep=";")
@@ -240,4 +249,4 @@ class PortfolioUtilities():
         return portfolio, portfolioLenght
 
 
-print(sys.executable)
+#portfolioUtilities.DisplayIsin(portfolioStructure)

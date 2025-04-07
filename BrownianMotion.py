@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 class BrownianMotion():
 
@@ -14,10 +15,13 @@ class BrownianMotion():
     ])
 
     def __init__(self, prix_initials):
-        self.prix_initials = prix_initials.apply(lambda col: col[col.first_valid_index()] if col.first_valid_index() is not None else np.nan)
-        self.rendements_moyens = prix_initials.mean()
-        self.correlations = prix_initials.corr()
-        self.volatilites = prix_initials.std()
+        self.prix_initials = prix_initials.apply(
+            lambda col: pd.Series(col[col.first_valid_index()] if col.first_valid_index() is not None else np.nan)
+        )
+        self.prix_initials = self.prix_initials.to_numpy().tolist()[0]
+        self.rendements_moyens = prix_initials.pct_change(fill_method=None).mean() * 252
+        self.correlations = prix_initials.pct_change(fill_method=None).corr()
+        self.volatilites = prix_initials.pct_change(fill_method=None).std() * 252
         #tt
 
 # 🔹 Simulation des trajectoires corrélées des actifs
@@ -67,6 +71,7 @@ class BrownianMotion():
         volatilite_portefeuille = np.array([x[2] for x in portefeuilles])
         print("max sharpe:", np.max(rendements_portefeuille/volatilite_portefeuille))
         self.PlotEfficientLimit(volatilite_portefeuille, rendements_portefeuille)
+
         # 🔹 Tracer la frontière de risque
     def PlotEfficientLimit(self, volatilite_portefeuille, rendements_portefeuille):
         plt.figure(figsize=(10, 6))
