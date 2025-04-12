@@ -39,5 +39,8 @@ class RobustPortfolio():
 
         # Résolution du problème robuste
         prob = cp.Problem(cp.Minimize(risk), constraints)
-        prob.solve()
+        try:
+            prob.solve()
+        except Exception as e:
+            return 0, 0
         return np.round(w.value, 2), np.sqrt(risk.value)

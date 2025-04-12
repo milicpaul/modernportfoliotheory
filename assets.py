@@ -430,6 +430,45 @@ ETFCommodities = [
     "CH0116015352", # description : Suivi de l'indice UBS CMCI WTI Crude Oil CHF hedged Total Return Index, avec exposition au pétrole brut WTI.
     "CH0047533523"#description : Exposition directe à l'or physique avec couverture en CHF.
 ]
+Pietro = ["US8085247976",
+          "NL0010273215",
+          "IE00BFMXXD54",
+          "IE00B3RBWM25",
+          #"CH1256123717",
+          #"CH0587304764",
+          "CH0017142719"
+]
+
+lowVariance = ['KDP', 'PFE', 'XEL', 'EXC', 'MDLZ', 'CSCO'] #volatility
+
+AEX = [
+    "NL0011540547",   # ABN AMRO Group N.V.
+    "NL0012969182",   # Adyen N.V.
+    "NL0000303709",   # Aegon N.V.
+    "NL0011794037",   # Ahold Delhaize N.V.
+    "NL0013267909",   # Akzo Nobel N.V.
+    "LU1598757687",   # ArcelorMittal S.A.
+    "NL0000334118",   # ASM International N.V.
+    "NL0010273215",   # ASML Holding N.V.
+    "NL0011872643",   # ASR Nederland N.V.
+    "NL0012866412",   # BE Semiconductor Industries N.V.
+    "CH1216478797",   # DSM-Firmenich AG
+    "NL0012059018",   # Exor N.V.
+    "NL0000009165",   # Heineken N.V.
+    "NL0010801007",   # IMCD N.V.
+    "NL0011821202",   # ING Groep N.V.
+    "NL0000009082",   # Koninklijke KPN N.V.
+    "NL0010773842",   # NN Group N.V.
+    "NL0000009538",   # Koninklijke Philips N.V.
+    "NL0013654783",   # Prosus N.V.
+    "NL0000379121",   # Randstad N.V.
+    "NL0006144495",   # RELX N.V.
+    "GB00BP6MXD84",   # Shell plc
+    "NL0015000IY2",   # Universal Music Group N.V.
+    "NL0000388619",   # Unilever N.V.
+    "NL0000395903",   # Wolters Kluwer N.V.
+]
+
 
 p1 = ['US4581401001', 'US92826C8394', 'US88579Y1010', 'US17275R1023', 'US1491231015'] #30 - 15 - 2.1
 p2 = ['US0231351067', 'US12572Q1058', 'US02079K3059', 'US1255231003', 'US0530151036'] #29.4 - 10.931 - 2.6901

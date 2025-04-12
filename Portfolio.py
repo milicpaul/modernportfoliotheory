@@ -9,6 +9,8 @@ import KellyPortfolio as k
 import RobustPortfolio as rb
 import sys
 import BrownianMotion as br
+import assets
+
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -18,14 +20,13 @@ class ModernPortfolioTheory():
     sharpeRatio = 2
 
     def __init__(self, nbOfSimulatedWeights, threshold, sharpeRatio):
-        a = 1
         if os.name != "Windows" and os.name != 'nt':
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
         else:
             self.path = "C:/Users/paul.milic/Modern Portfolio/"
         self.nbOfSimulatedWeights = nbOfSimulatedWeights
         self.threshold = threshold
-        self.sharpeRatio = 2
+        self.sharpeRatio = sharpeRatio
 
     def UpAndDownVolatility(self, data):
         return np.std(data[data < 0], ddof=1), np.std(data[data > 0], ddof=1)
@@ -43,6 +44,7 @@ class ModernPortfolioTheory():
             highestVolatility = 0
             highestSharpe = 0
             weightsList = []
+            returns.to_csv(self.path + "test.csv", sep=";")
             mean_returns = returns.mean() * 252  # Rendement moyen annuel
             cov_matrix = returns.cov() * 252  # Matrice de covariance annuelle
             stop = False
@@ -76,11 +78,12 @@ class ModernPortfolioTheory():
         data = []
         assets = []
         for f in fileNames:
-            localDf = pd.read_pickle(self.path + f[0])
-            localDf = localDf.loc[:, localDf.isna().mean() * 100 < 95]
-            localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 95, :]
-            assets.append(list(localDf.columns))
-            data.append(localDf)
+            #if f[1] > 0:
+                localDf = pd.read_pickle(self.path + f[0])
+                localDf = localDf.loc[:, localDf.isna().mean() * 100 < 95]
+                localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 95, :]
+                assets.append(list(localDf.columns))
+                data.append(localDf)
         fullData = pd.concat(data, axis=1)
         fullData = fullData.loc[:, ~fullData.columns.duplicated()]
         return fullData, assets
@@ -95,7 +98,7 @@ class ModernPortfolioTheory():
         vecteur[indice_max] += erreur
         return np.round(vecteur, 2)
 
-    def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage, showDensity=True):
+    def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage, process, showDensity=True, random=True, localPortfolio=[]):
         portfolioU = pu.PortfolioUtilities()
         timeSeries = data
         data = data.pct_change(fill_method=None)  # .dropna()
@@ -105,10 +108,14 @@ class ModernPortfolioTheory():
             print(f"\rSimulation # : {j+1}", end="", flush=True)
             enoughData = False
             while not enoughData:
-                portfolio, portfolioLength = portfolioU.ReturnRandomPortfolio(percentage, isin)
+                if random:
+                    portfolio = portfolioU.ReturnRandomPortfolio(percentage, isin, process)
+                else:
+                    portfolio = localPortfolio
+                portfolioLength = len(portfolio)
                 currentData = data[portfolio]
                 currentData = currentData[(currentData.index >= pd.to_datetime('2022-06-15')) & (
-                                           currentData.index <= pd.to_datetime('2025-03-15'))]
+                                           currentData.index <= pd.to_datetime('2025-04-15'))]
                 originalData = timeSeries[portfolio]
                 enoughData = currentData.shape[1] == portfolioLength
             weightsList, highestReturn, highestVolatility, highestSharpe = self.Volatility(currentData, False, 0, [])
@@ -135,24 +142,35 @@ class ModernPortfolioTheory():
             for j in range(nbOfInstruments):
                 fullPortfolio[j][1] = v[j]
             data, isin = self.BuilHeterogeneousPortfolio(fullPortfolio)
-            bestPortfolio = self.SelectRandomAssets(data, isin, 10, portfolioStructure, False)
+            bestPortfolio = self.SelectRandomAssets(data, isin, 1, portfolioStructure, False)
             print(pu.ReturnAssetDescription(bestPortfolio[0]))
             #self.DisplayResults(bestPortfolio)
 
-
-portfolioStructure = [["Swiss Shares SMI Mid.pkl", 4],
-                      ["Swiss Shares SMI.pkl", 0],
-                      ["Swiss Shares SMI Expanded.pkl", 0],
-                      ["Dow Jones.pkl", 2],
-                      ["ETF MSCI World.pkl", 2],
-                      ["FTSE Mib.pkl", 0],
-                      ["DAX40.pkl", 2],
-                      ["CAC 40.pkl", 3],
-                      ["Swiss Bonds.pkl", 0],
-                      ["DAX40.pkl", 5],
-                      ["ETF CHF.pkl", 4]
-]
 def main():
+    portfolioStructure = [["AEX Netherland.pkl", 0],
+                          ["CAC 40.pkl", 0],
+                          ["DAX40.pkl", 0],
+                          ["Dow Jones.pkl", 0],
+                          ["ETF CHF.pkl", 0],
+                          ["ETF CHF_positive_variance_.pkl", 3],
+                          ["ETF Equity Developed Markets CHF.pkl", 0],
+                          ["ETF MSCI World.pkl", 0],
+                          ["ETF Swiss Bonds.pkl", 0],
+                          ["ETF Swiss Commodities CHF.pkl", 0],
+                          ["FTSE Mib.pkl", 0],
+                          ["NASDAQ100.pkl", 0],
+                          ["SMI Components.pkl", 0],
+                          ["SMI Mid Components CHF.pkl", 0],
+                          ["Swiss Bonds ETF.pkl", 0],
+                          ["Swiss Bonds.pkl", 0, ],
+                          ["Swiss Equities Emerging Market ETF.pkl", 0],
+                          ["Swiss Shares CHF.pkl", 0],
+                          ["Swiss Shares SMI Expanded.pkl", 0],
+                          ["Swiss Shares SMI Mid.pkl", 0],
+                          ["Swiss Shares SMI.pkl", 0],
+                          ["Swiss Shares.pkl", 0],
+                          ["Pietro.pkl", 5]]
+
     kelly = k.KellyCriterion()
     robust = rb.RobustPortfolio()
     portfolio = ModernPortfolioTheory(10000, 2, 4)
@@ -160,26 +178,28 @@ def main():
     #portfolio.FindBestPortfolio(portfolioStructure)
     data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
     showDensity = False
+    isRandom = False
     #portfolios = portfolioUtilities.ReturnRandomPortfolio(portfolioStructure, isin)
     #brownian = br.BrownianMotion(portfolioUtilities.ReturnDataset(portfolio, data))
     #brownian.Simulate(252, 1000)
-    #exit()
-    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, portfolioUtilities)
+    #exit()d
+    localPortfolio = assets.lowVariance
+    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, isRandom, localPortfolio)
     portfolioUtilities.DisplayResults(portfolioUtilities, bestPortfolios)
-    #print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)
-    #print("Robust:", robust.RobustPortfolio(bestPortfolios[5], False))
+    print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)
+    print("Robust:", robust.RobustPortfolio(bestPortfolios[5], False))
     #portfolioUtilities.df.to_csv(portfolioUtilities.path + "Assets Description.csv", sep=";", index=False)
-    print(portfolioUtilities.ReturnAssetDescription(bestPortfolios[0][0]))
+    print(portfolioUtilities.ReturnAssetDescription(bestPortfolios[0]))
+    assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolios[0])
     data = data[bestPortfolios[0]]
     data = data[data.index > pd.to_datetime('2022-06-15')].pct_change(fill_method=None)
     portfolioPerformance = np.sum(bestPortfolios[1] * (data.mean() * 252))
-    portfolioUtilities.plot_series_temporelles(bestPortfolios[6], bestPortfolios[2]/bestPortfolios[3], bestPortfolios[2], bestPortfolios[3], portfolioPerformance)
+    portfolioUtilities.plot_series_temporelles(assetsDescription, bestPortfolios[6], bestPortfolios[2]/bestPortfolios[3], bestPortfolios[2], bestPortfolios[3], portfolioPerformance)
     #bestPortfolio = portfolio.FindMaximum(bestPortfolios, 2)
     #portfolioStructure.DisplayResults(bestPortfolio)
     #portfolioUtilies.df.to_csv(pUtilities.path + "Assets Description.csv", sep=";", index=False)
     print(1)
 
 if __name__ == '__main__':
-    print(sys.executable)
     multiprocessing.freeze_support()  # Nécessaire si tu crées un exécutable avec PyInstaller
     main()

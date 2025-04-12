@@ -9,6 +9,7 @@ import numpy as np
 import threading
 import sys
 import random
+import time
 
 class PortfolioUtilities():
     cvsLock = threading.Lock()
@@ -17,7 +18,8 @@ class PortfolioUtilities():
             self.path = "C:/Users/paul.milic/Modern Portfolio/"
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
-        self.df = pd.read_csv(self.path + "Assets Description.csv", sep=";", index_col=False)
+        self.df = pd.read_csv(self.path + "Assets Description.csv", sep=",", index_col=False)
+        a=1
 
     def DisplayIsin(self, portfolioStructure):
         df = pd.DataFrame()
@@ -34,13 +36,9 @@ class PortfolioUtilities():
                 df = pd.read_pickle(self.path + f[0])
                 if i in df.columns.tolist():
                     found[isin.index(i)] = True
+                    print(f)
                     break
         return found
-
-    def GetAssetsTimeSeries(self, assetComponents, fileName):
-        isinDf = yf.download(assetComponents, start="2015-01-01", end="2025-03-01", interval="1d")
-        isinDf = isinDf['Close']
-        isinDf.to_pickle(self.path + fileName)
 
     def GetTicker(self, component):
         spy = yf.Ticker("SPY")
@@ -66,7 +64,7 @@ class PortfolioUtilities():
             try:
                 description = next(iter(self.df.loc[self.df["ISIN"] == i, "Description"].values), None)
             except Exception as e:
-                print(e)
+                print("ReturnAssetDescription:", e)
             if not description is None:
                 found.append(description)
             else:
@@ -82,17 +80,20 @@ class PortfolioUtilities():
         HEADERS = {"Content-Type": "application/json", "X-OPENFIGI-APIKEY": "ffc41f35-e136-4c95-866e-82783229c4cd"}
         url = "https://api.openfigi.com/v3/mapping"
         data = [{"idType": "ID_ISIN", "idValue": isin}]
-        response = requests.post(url, json=data, headers=HEADERS)
-        if response.status_code == 200:
-            result = response.json()
-            if result and "data" in result[0]:
-                if name:
-                    return result[0]["data"][0]["name"]
-                else:
-                    return result[0]["data"][0]["ticker"]
+        try:
+            response = requests.post(url, json=data, headers=HEADERS)
+            if response.status_code == 200:
+                result = response.json()
+                if result and "data" in result[0]:
+                    if name:
+                        return result[0]["data"][0]["name"]
+                    else:
+                        return result[0]["data"][0]["ticker"]
+        except Exception as e:
+            a = 1
         return "Ticker introuvable"
 
-    def plot_series_temporelles(self, df, sharpe_ratio=None, rendement=None, volatilite=None, performance=None,
+    def plot_series_temporelles(self, assetsDescription, df, sharpe_ratio=None, rendement=None, volatilite=None, performance=None,
                                 title="Évolution des Séries Économiques", xlabel="Date", ylabel="Valeur",
                                 log_scale=True):
         """
@@ -102,74 +103,92 @@ class PortfolioUtilities():
         :param sharpe_ratio: Ratio de Sharpe du portefeuille (float).
         :param rendement: Rendement du portefeuille en % (float).
         :param volatilite: Volatilité du portefeuille en % (float).
+        :param performance: Performance du portefeuille en % (float).
         :param title: Titre du graphique.
         :param xlabel: Étiquette de l'axe des x.
         :param ylabel: Étiquette de l'axe des y.
         :param log_scale: Booléen pour activer l'échelle logarithmique sur l'axe Y.
         """
         try:
-            df = df[df['Date'] >= '2015-01-01']
-            # Vérifier que l'index est bien en datetime
+            # Filtrer les dates à partir de 2015
+            df = df[df.index >= pd.to_datetime('2015-01-01')]
+
+            # Assurer que l'index est bien en datetime
             if not isinstance(df.index, pd.DatetimeIndex):
                 raise ValueError("L'index du DataFrame doit être de type datetime.")
 
-            # Style et figure
+            # Conversion de toutes les colonnes en numérique (les erreurs deviennent NaN)
+            df = df.apply(pd.to_numeric, errors='coerce')
+
+            # Style du graphique
             sns.set(style="darkgrid")
             fig, ax = plt.subplots(figsize=(12, 6))
+            names = pd.DataFrame(columns=assetsDescription)
+            j = 0
+            #for col in df.columns:
+            for col in names.columns:
+                #serie = df[col].dropna()
+                serie = df.iloc[:, j].dropna()
+                j += 1
+                if serie.empty:
+                    continue  # On saute les colonnes vides
 
-            # Tracer chaque série et ajouter un label à gauche et à droite
-            for col in df.columns:
-                ax.plot(df.index, df[col], label=col)
+                ax.plot(serie.index, serie.values, label=col)
 
-                # Ajouter un label à la fin de chaque courbe
-                last_value = df[col].iloc[-1]  # Dernière valeur de la série
-                last_date = df.index[-1]  # Dernière date
-                ax.text(last_date, last_value, col, fontsize=12, verticalalignment='center',
-                        horizontalalignment='left',
-                        bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
+                # Labels de début et de fin de courbe (avec cast en float)
+                try:
+                    first_value = float(serie.iloc[0])
+                    first_date = serie.index[0]
+                    ax.text(first_date, first_value, col, fontsize=12, verticalalignment='center',
+                            horizontalalignment='right',
+                            bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
+                except Exception as e:
+                    print(f"Erreur sur la première valeur de {col}: {e}")
 
-                # Ajouter un label au début de chaque courbe
-                first_value = df[col].iloc[0]  # Première valeur de la série
-                first_date = df.index[0]  # Première date
-                ax.text(first_date, first_value, col, fontsize=12, verticalalignment='center',
-                        horizontalalignment='right',
-                        bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
+                try:
+                    last_value = float(serie.iloc[-1])
+                    last_date = serie.index[-1]
+                    ax.text(last_date, last_value, col, fontsize=12, verticalalignment='center',
+                            horizontalalignment='left',
+                            bbox=dict(facecolor='white', alpha=0.7, edgecolor='gray', boxstyle="round,pad=0.3"))
+                except Exception as e:
+                    print(f"Erreur sur la dernière valeur de {col}: {e}")
 
-            # Personnalisation du graphique
+            # Titre et axes
             ax.set_title(title, fontsize=14)
             ax.set_xlabel(xlabel, fontsize=12)
             ax.set_ylabel(ylabel, fontsize=12)
             plt.xticks(rotation=45)
 
-            # Activer l'échelle logarithmique si demandé
+            # Échelle logarithmique
             if log_scale:
                 ax.set_yscale("log")
 
-            # Ajouter des annotations pour les indicateurs financiers
+            # Encadré d'infos financières
             info_text = ""
             if sharpe_ratio is not None:
                 info_text += f"Ratio de Sharpe: {sharpe_ratio:.2f}\n\n"
             if rendement is not None:
-                info_text += f"Rendement: {rendement*100:.2f}%\n\n"
+                info_text += f"Rendement: {rendement * 100:.2f}%\n\n"
             if volatilite is not None:
-                info_text += f"Volatilité: {volatilite*100:.2f}%\n\n"
+                info_text += f"Volatilité: {volatilite * 100:.2f}%\n\n"
             if performance is not None:
-                info_text += f"Performance: {performance*100:.2f}%"
+                info_text += f"Performance: {performance * 100:.2f}%"
 
             if info_text:
-                # Ajouter un encadré de texte sur le graphique
                 ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
                         verticalalignment='top',
                         bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='lightgray'))
+
             try:
                 plt.tight_layout()
-            except Exception as a:
-                print(a)
+            except Exception as e:
+                print(f"Erreur dans tight_layout : {e}")
 
             plt.show()
-        except Exception as e:
-            print(e)
 
+        except Exception as e:
+            print(f"Erreur dans plot_series_temporelles : {e}")
 
     @staticmethod
     def ShowDensity(data):
@@ -232,21 +251,53 @@ class PortfolioUtilities():
         assets = pd.read_csv(fileName, on_bad_lines="skip", encoding_errors="ignore", sep=";")
         assets.to_pickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.pkl")
 
-    def ReturnRandomPortfolio(self, percentage, isin):
+    def ReturnRandomPortfolio(self, percentage, isin, process):
         k = 0
         portfolio = []  # random portfolio
-        portfolioLenght = 0
+        localRandom = random.Random(time.time_ns() + process + id(threading.current_thread()))
         for p in percentage:
-            if len(isin[k]) < percentage[k][1]:
-                quantity = len(isin[k])
-            else:
-                quantity = percentage[k][1]
-            indices = [random.choices(range(len(isin[k])), k=percentage[k][1]) for k in range(len(percentage))]
-            portfolio = [isin[k][i] for k, idx in enumerate(indices) for i in idx]
-            portfolioLenght += quantity
+            if p[1] > 0:
+                if len(isin[k]) < percentage[k][1]:
+                    indices = localRandom.sample(range(len(isin[k])), range(len(isin[k])))
+                else:
+                    indices = localRandom.sample(range(len(isin[k])), percentage[k][1])
+                #indices = [random.choices(range(len(isin[k])), k=percentage[k][1]) for k in range(len(percentage))]
+                portfolio += [isin[k][i] for i in indices]
             k += 1
         k = 0
-        return portfolio, portfolioLenght
+        print(portfolio)
+        return portfolio
 
+if __name__ == '__main__':
 
-#portfolioUtilities.DisplayIsin(portfolioStructure)
+    portfolioStructure = [["AEX Netherland.pkl", 2],
+                          ["CAC 40.pkl", 3],
+                          ["DAX40.pkl", 5],
+                          ["Dow Jones.pkl", 5],
+                          ["ETF CHF.pkl", 4],
+                          ["ETF Equity Developed Markets CHF.pkl", 0],
+                          ["ETF MSCI World.pkl", 2],
+                          ["ETF Swiss Bonds.pkl", 2],
+                          ["ETF Swiss Commodities CHF.pkl", 2],
+                          ["FTSE Mib.pkl", 0],
+                          ["NASDAQ100.pkl", 0],
+                          ["SMI Components.pkl", 0],
+                          ["SMI Mid Components CHF.pkl", 0],
+                          ["Swiss Bonds ETF.pkl", 0],
+                          ["Swiss Bonds.pkl", 0,],
+                          ["Swiss Equities Emerging Market ETF.pkl", 0],
+                          ["Swiss Shares CHF.pkl", 0],
+                          ["Swiss Shares SMI Expanded.pkl", 0],
+                          ["Swiss Shares SMI Mid.pkl", 0],
+                          ["Swiss Shares SMI.pkl", 0],
+                          ["Swiss Shares.pkl", 0],
+                          ["Pietro.pkl", 0]
+     ]
+
+    portfolio = PortfolioUtilities()
+    print(portfolio.FindIsin(["US8085247976"], portfolioStructure))
+    #portfolioUtilities.DisplayIsin(portfolioStructure)
+    #US8085247976
+    #IE00BFMXXD54
+    #CH1256123717
+    #CH0587304764
