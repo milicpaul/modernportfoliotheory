@@ -439,7 +439,8 @@ Pietro = ["US8085247976",
           "CH0017142719"
 ]
 
-lowVariance = ['KDP', 'PFE', 'XEL', 'EXC', 'MDLZ', 'CSCO'] #volatility
+lowVariance =  ['MRK', 'FAST', 'PEP', 'CDNS', 'CSCO', 'SNPS']
+ #volatility
 
 AEX = [
     "NL0011540547",   # ABN AMRO Group N.V.

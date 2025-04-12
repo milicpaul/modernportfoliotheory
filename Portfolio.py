@@ -42,6 +42,7 @@ class ModernPortfolioTheory():
         try:
             highestReturn = 0
             highestVolatility = 0
+            lowerVolatility = sys.maxsize
             highestSharpe = 0
             weightsList = []
             returns.to_csv(self.path + "test.csv", sep=";")
@@ -56,6 +57,10 @@ class ModernPortfolioTheory():
                     weightsList.append(self.MoveInSphere(bestWeights, 0.009 + epsilonIncrease))
                 portfolio_return = np.sum(weightsList[-1] * mean_returns)
                 portfolio_volatility = np.sqrt(np.dot(weightsList[-1].T, np.dot(cov_matrix, weightsList[-1])))
+                if portfolio_volatility < lowerVolatility:
+                    lowerVolatility = portfolio_volatility
+                    returnsLowerVolatility = portfolio_return
+                    sharpeLowerVolatility = round(portfolio_return/portfolio_volatility, 2)
                 if portfolio_volatility > 0 and (portfolio_return / portfolio_volatility > highestSharpe):
                     highestSharpe = portfolio_return / portfolio_volatility
                     highestReturn = portfolio_return
@@ -65,7 +70,7 @@ class ModernPortfolioTheory():
                 i += 1
         except Exception as a:
             print("Volatility error:", a)
-        return weightsList[index], highestReturn, highestVolatility, highestSharpe
+        return weightsList[index], highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLowerVolatility, sharpeLowerVolatility
 
     def FindInSphere(self, data, weight, nbOfSimulation):
         r = []
@@ -118,11 +123,12 @@ class ModernPortfolioTheory():
                                            currentData.index <= pd.to_datetime('2025-04-15'))]
                 originalData = timeSeries[portfolio]
                 enoughData = currentData.shape[1] == portfolioLength
-            weightsList, highestReturn, highestVolatility, highestSharpe = self.Volatility(currentData, False, 0, [])
+            weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = self.Volatility(currentData, False, 0, [])
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
             bestPortfolios.append(
-                [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData, originalData])
+                [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
+                 originalData, lowerVolatility, returnsLower, sharpeLower])
         return bestPortfolios[np.argmax(list(zip(*bestPortfolios))[self.sharpeRatio])]
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
@@ -151,25 +157,25 @@ def main():
                           ["CAC 40.pkl", 0],
                           ["DAX40.pkl", 0],
                           ["Dow Jones.pkl", 0],
-                          ["ETF CHF.pkl", 0],
-                          ["ETF CHF_positive_variance_.pkl", 3],
+                          ["ETF CHF.pkl", 2],
+                          ["ETF CHF_positive_variance_.pkl", 0],
                           ["ETF Equity Developed Markets CHF.pkl", 0],
                           ["ETF MSCI World.pkl", 0],
                           ["ETF Swiss Bonds.pkl", 0],
                           ["ETF Swiss Commodities CHF.pkl", 0],
                           ["FTSE Mib.pkl", 0],
                           ["NASDAQ100.pkl", 0],
-                          ["SMI Components.pkl", 0],
+                          ["SMI Components.pkl", 2],
                           ["SMI Mid Components CHF.pkl", 0],
-                          ["Swiss Bonds ETF.pkl", 0],
-                          ["Swiss Bonds.pkl", 0, ],
+                          ["Swiss Bonds ETF.pkl", 2],
+                          ["Swiss Bonds.pkl", 2, ],
                           ["Swiss Equities Emerging Market ETF.pkl", 0],
                           ["Swiss Shares CHF.pkl", 0],
                           ["Swiss Shares SMI Expanded.pkl", 0],
-                          ["Swiss Shares SMI Mid.pkl", 0],
+                          ["Swiss Shares SMI Mid.pkl", 2],
                           ["Swiss Shares SMI.pkl", 0],
                           ["Swiss Shares.pkl", 0],
-                          ["Pietro.pkl", 5]]
+                          ["Pietro.pkl", 0]]
 
     kelly = k.KellyCriterion()
     robust = rb.RobustPortfolio()
@@ -178,13 +184,13 @@ def main():
     #portfolio.FindBestPortfolio(portfolioStructure)
     data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
     showDensity = False
-    isRandom = False
+    isRandom = True
     #portfolios = portfolioUtilities.ReturnRandomPortfolio(portfolioStructure, isin)
     #brownian = br.BrownianMotion(portfolioUtilities.ReturnDataset(portfolio, data))
     #brownian.Simulate(252, 1000)
     #exit()d
     localPortfolio = assets.lowVariance
-    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, isRandom, localPortfolio)
+    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 5, portfolioStructure, showDensity, isRandom, localPortfolio)
     portfolioUtilities.DisplayResults(portfolioUtilities, bestPortfolios)
     print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)
     print("Robust:", robust.RobustPortfolio(bestPortfolios[5], False))

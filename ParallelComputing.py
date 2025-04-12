@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class Parallel():
+
     @staticmethod
     def compute_volatility(stat, portfolios, data):
         results = []
@@ -18,7 +19,7 @@ class Parallel():
                 results.append(volatility.result())
                 print("[INFO] Un thread a terminé son exécution.")
         print("[INFO] Tous les threads ont terminé !")
-        return results[np.argmax(list(zip(*results)))]
+        return results[np.argmin(list(zip(*results))[0])]
 
     @staticmethod
     def run_select_random_assets_parallel(portfolio, data, isin, nbOfSimulation, percentage, showDensity, isRandom, localPortfolio=[]):

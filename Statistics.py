@@ -31,14 +31,19 @@ class Statistics():
     def EstimateVolatility(self, portfolios, data):
         volatilities = []
         weights = np.ones(6)/6
+        #weights = np.array([0.42, 0.01, 0.29, 0.01, 0.25, 0.01])
         i = 0
         for portfolio in portfolios:
-            df = data[list(portfolio)].pct_change()
-            volatilities.append(np.sqrt(np.dot(weights.T, np.dot(df.cov(), weights))))
+            df = data[list(portfolio)]
+            df = df[df.index >= pd.to_datetime('2022-06-15')]
+            volatilities.append([np.sqrt(np.dot(weights.T, np.dot(df.cov()*252, weights))), portfolio])
             i += 1
             if i%10 == 0:
                 print(f"\riteration # : {i}, {len(portfolios)}", end="", flush=True)
-        return portfolios[np.argmin(volatilities)]
+            if i == 10000:
+                return volatilities[np.argmin([x[0] for x in volatilities])]
+                break
+        return volatilities[np.argmin([x[0] for x in volatilities])]
 
     def CompareVolatility(self, portfolio, data, weights):
         data = data[data.index >= pd.to_datetime('2022-06-15')]

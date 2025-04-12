@@ -227,9 +227,8 @@ class PortfolioUtilities():
             print("Optimal portfolio:", bestPortfolio[0])
             print("Optima name", ",".join(instance.ReturnAssetDescription(bestPortfolio[0])) )
             print("Optimal weight:", bestPortfolio[1])
-            print("Optimal return", bestPortfolio[2] * 100)
-            print("Optimal volatility:", bestPortfolio[3] * 100)
-            print("Optimal sharpe ratio:", bestPortfolio[2] / bestPortfolio[3])
+            print("Optimal return:", round(bestPortfolio[2] * 100,2), " Optimal volatility:", round(bestPortfolio[3] * 100,2), " Optimal sharpe ratio:", round(bestPortfolio[2] / bestPortfolio[3],2))
+            print("Returns lower :", round(bestPortfolio[-2] * 100,2)," Lower volatility  :", round(bestPortfolio[-3] * 100,2)," lower sharpe        :", round(bestPortfolio[-1],2))
         except Exception as a:
             bestPortfolio[0] = "N/A"
         best = " "
@@ -270,11 +269,11 @@ class PortfolioUtilities():
 
 if __name__ == '__main__':
 
-    portfolioStructure = [["AEX Netherland.pkl", 2],
-                          ["CAC 40.pkl", 3],
-                          ["DAX40.pkl", 5],
-                          ["Dow Jones.pkl", 5],
-                          ["ETF CHF.pkl", 4],
+    portfolioStructure = [["AEX Netherland.pkl", 0],
+                          ["CAC 40.pkl", 0],
+                          ["DAX40.pkl", 0],
+                          ["Dow Jones.pkl", 0],
+                          ["ETF CHF.pkl", 0],
                           ["ETF Equity Developed Markets CHF.pkl", 0],
                           ["ETF MSCI World.pkl", 2],
                           ["ETF Swiss Bonds.pkl", 2],
