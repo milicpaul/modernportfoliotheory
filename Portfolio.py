@@ -13,6 +13,30 @@ import assets
 
 
 class ModernPortfolioTheory():
+    portfolioStructure = [["AEX Netherland.pkl", 0],
+                          ["CAC 40.pkl", 0],
+                          ["DAX40.pkl", 0],
+                          ["Dow Jones.pkl", 0],
+                          ["ETF CHF.pkl", 2],
+                          ["ETF CHF_positive_variance_.pkl", 0],
+                          ["ETF Equity Developed Markets CHF.pkl", 0],
+                          ["ETF MSCI World.pkl", 0],
+                          ["ETF Swiss Bonds.pkl", 0],
+                          ["ETF Swiss Commodities CHF.pkl", 0],
+                          ["FTSE Mib.pkl", 0],
+                          ["NASDAQ100.pkl", 0],
+                          ["SMI Components.pkl", 2],
+                          ["SMI Mid Components CHF.pkl", 0],
+                          ["Swiss Bonds ETF.pkl", 2],
+                          ["Swiss Bonds.pkl", 2, ],
+                          ["Swiss Equities Emerging Market ETF.pkl", 0],
+                          ["Swiss Shares CHF.pkl", 0],
+                          ["Swiss Shares SMI Expanded.pkl", 0],
+                          ["Swiss Shares SMI Mid.pkl", 2],
+                          ["Swiss Shares SMI.pkl", 0],
+                          ["Swiss Shares.pkl", 0],
+                          ["Pietro.pkl", 0]]
+
     weight_list = []
     nbOfSimulatedWeights = 0
     threshold = 0
@@ -148,7 +172,7 @@ class ModernPortfolioTheory():
             for j in range(nbOfInstruments):
                 fullPortfolio[j][1] = v[j]
             data, isin = self.BuilHeterogeneousPortfolio(fullPortfolio)
-            bestPortfolio = self.SelectRandomAssets(data, isin, 1, portfolioStructure, False)
+            bestPortfolio = self.SelectRandomAssets(data, isin, 1, self.portfolioStructure, False)
             print(pu.ReturnAssetDescription(bestPortfolio[0]))
             #self.DisplayResults(bestPortfolio)
 
@@ -188,9 +212,9 @@ def main():
     #portfolios = portfolioUtilities.ReturnRandomPortfolio(portfolioStructure, isin)
     #brownian = br.BrownianMotion(portfolioUtilities.ReturnDataset(portfolio, data))
     #brownian.Simulate(252, 1000)
-    #exit()d
+    #exit()
     localPortfolio = assets.lowVariance
-    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 5, portfolioStructure, showDensity, isRandom, localPortfolio)
+    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, isRandom, localPortfolio)
     portfolioUtilities.DisplayResults(portfolioUtilities, bestPortfolios)
     print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)
     print("Robust:", robust.RobustPortfolio(bestPortfolios[5], False))
