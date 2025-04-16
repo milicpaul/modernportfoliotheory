@@ -14,9 +14,9 @@ class Parallel():
         """Tâche qui affiche les notifications dès qu'il y a un message dans la queue"""
         while True:
             msg = await self.message_queue.get()
-            with gui.aggrid:
+            with gui.one:
                 ui.notify(msg)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.3)
 
     @staticmethod
     def compute_volatility(stat, portfolios, data):
@@ -44,12 +44,10 @@ class Parallel():
                 future = executor.submit(portfolio.SelectRandomAssets, data, isin, nbOfSimulation, percentage, i, showDensity, isRandom, localPortfolio)
                 futures.append(future)
                 await self.message_queue.put(f"Thread started !")
-                time.sleep(0.1)
             # Récupération des résultats au fur et à mesure
             for future in as_completed(futures):
                 results.append(future.result())
                 await self.message_queue.put(f"Thread ended !")
-                time.sleep(0.1)
                 print("[INFO] Un thread a terminé son exécution.")
         print("[INFO] Tous les threads ont terminé !")
         return results[np.argmax(list(zip(*results))[4])]

@@ -4,13 +4,7 @@ import random
 import os
 import PortfolioUtilities as pu
 import multiprocessing
-import ParallelComputing
-import KellyPortfolio as k
-import RobustPortfolio as rb
 import sys
-import BrownianMotion as br
-import assets
-
 
 class ModernPortfolioTheory():
     portfolioStructure = [["AEX Netherland.pkl", 0],
@@ -63,17 +57,17 @@ class ModernPortfolioTheory():
         return np.round(new_w, 3)
 
     def Volatility(self, returns, optimization, epsilonIncrease, bestWeights):
+        highestReturn = 0
+        highestVolatility = 0
+        highestSharpe = 0
+        lowerVolatility = sys.maxsize
+        index = 0
+        i = 0
+        weightsList = []
         try:
-            highestReturn = 0
-            highestVolatility = 0
-            lowerVolatility = sys.maxsize
-            highestSharpe = 0
-            weightsList = []
             returns.to_csv(self.path + "test.csv", sep=";")
             mean_returns = returns.mean() * 252  # Rendement moyen annuel
             cov_matrix = returns.cov() * 252  # Matrice de covariance annuelle
-            stop = False
-            i = 0
             while i < self.nbOfSimulatedWeights:
                 if not optimization:
                     weightsList.append(self.generate_weights(len(returns.columns)))
@@ -104,17 +98,18 @@ class ModernPortfolioTheory():
             self.Volatility(data, i * self.nbOfSimulatedWeights, r, weight, self.nbOfSimulatedWeights)
 
     def BuilHeterogeneousPortfolio(self, fileNames):
+        fullData = pd.DataFrame()
         data = []
         assets = []
         for f in fileNames:
-            #if f[1] > 0:
-                localDf = pd.read_pickle(self.path + f[0])
-                localDf = localDf.loc[:, localDf.isna().mean() * 100 < 95]
-                localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 95, :]
-                assets.append(list(localDf.columns))
-                data.append(localDf)
-        fullData = pd.concat(data, axis=1)
-        fullData = fullData.loc[:, ~fullData.columns.duplicated()]
+            localDf = pd.read_pickle(self.path + f[0])
+            localDf = localDf.loc[:, localDf.isna().mean() * 100 < 95]
+            localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 95, :]
+            assets.append(list(localDf.columns))
+            data.append(localDf)
+        if len(assets) > 0:
+            fullData = pd.concat(data, axis=1)
+            fullData = fullData.loc[:, ~fullData.columns.duplicated()]
         return fullData, assets
 
     def generate_weights(self, n, min_val=0.01, max_val=0.9):
@@ -201,34 +196,6 @@ def main():
                           ["Swiss Shares.pkl", 0],
                           ["Pietro.pkl", 0]]
 
-    kelly = k.KellyCriterion()
-    robust = rb.RobustPortfolio()
-    portfolio = ModernPortfolioTheory(10000, 2, 4)
-    portfolioUtilities = pu.PortfolioUtilities()
-    #portfolio.FindBestPortfolio(portfolioStructure)
-    data, isin = portfolio.BuilHeterogeneousPortfolio(portfolioStructure)
-    showDensity = False
-    isRandom = True
-    #portfolios = portfolioUtilities.ReturnRandomPortfolio(portfolioStructure, isin)
-    #brownian = br.BrownianMotion(portfolioUtilities.ReturnDataset(portfolio, data))
-    #brownian.Simulate(252, 1000)
-    #exit()
-    localPortfolio = assets.lowVariance
-    bestPortfolios = ParallelComputing.Parallel.run_select_random_assets_parallel(portfolio, data, isin, 1, portfolioStructure, showDensity, isRandom, localPortfolio)
-    portfolioUtilities.DisplayResults(portfolioUtilities, bestPortfolios)
-    print("Kelly", kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns)), kelly.variance, kelly.returns, kelly.returns/kelly.variance)
-    print("Robust:", robust.RobustPortfolio(bestPortfolios[5], False))
-    #portfolioUtilities.df.to_csv(portfolioUtilities.path + "Assets Description.csv", sep=";", index=False)
-    print(portfolioUtilities.ReturnAssetDescription(bestPortfolios[0]))
-    assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolios[0])
-    data = data[bestPortfolios[0]]
-    data = data[data.index > pd.to_datetime('2022-06-15')].pct_change(fill_method=None)
-    portfolioPerformance = np.sum(bestPortfolios[1] * (data.mean() * 252))
-    portfolioUtilities.plot_series_temporelles(assetsDescription, bestPortfolios[6], bestPortfolios[2]/bestPortfolios[3], bestPortfolios[2], bestPortfolios[3], portfolioPerformance)
-    #bestPortfolio = portfolio.FindMaximum(bestPortfolios, 2)
-    #portfolioStructure.DisplayResults(bestPortfolio)
-    #portfolioUtilies.df.to_csv(pUtilities.path + "Assets Description.csv", sep=";", index=False)
-    print(1)
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()  # Nécessaire si tu crées un exécutable avec PyInstaller

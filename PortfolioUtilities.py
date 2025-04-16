@@ -19,7 +19,26 @@ class PortfolioUtilities():
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
         self.df = pd.read_csv(self.path + "Assets Description.csv", sep=",", index_col=False)
-        a=1
+
+    def GetAllAssets(self):
+        assets = []
+        files = [f for f in os.listdir(self.path) if f.endswith('.pkl')]
+        assetNames = pd.read_csv(self.path + "Assets Description.csv", sep=",")
+        for f in files:
+            df = round(pd.read_pickle(self.path + f).pct_change(fill_method=None), 2)
+            for c in df.columns:
+                description = assetNames.loc[assetNames['ISIN'] == c, 'Description'].values
+                if description.size == 0:
+                    desc = self.ReturnAssetDescription([c])
+                    if len(desc[0]) > 0:
+                        description = desc[0]
+                        self.df.loc[len(self.df)] = [c, description]
+                    else:
+                        description = ''
+                if isinstance(description, np.ndarray): description = description[0]
+                assets.append([description, c, round(df[c].var(), 4), df[df[c]>0][c].sum(), df[df[c]<0][c].sum(), f])
+        self.df.to_csv(self.path + "Assets Description.csv")
+        return assets
 
     def DisplayIsin(self, portfolioStructure):
         df = pd.DataFrame()
@@ -267,36 +286,45 @@ class PortfolioUtilities():
         print(portfolio)
         return portfolio
 
-if __name__ == '__main__':
+class ColumnManager:
+    def __init__(self, columns: list[dict]):
+        self.columns = columns.copy()  # copie défensive
 
-    portfolioStructure = [["AEX Netherland.pkl", 0],
-                          ["CAC 40.pkl", 0],
-                          ["DAX40.pkl", 0],
-                          ["Dow Jones.pkl", 0],
-                          ["ETF CHF.pkl", 0],
-                          ["ETF Equity Developed Markets CHF.pkl", 0],
-                          ["ETF MSCI World.pkl", 2],
-                          ["ETF Swiss Bonds.pkl", 2],
-                          ["ETF Swiss Commodities CHF.pkl", 2],
-                          ["FTSE Mib.pkl", 0],
-                          ["NASDAQ100.pkl", 0],
-                          ["SMI Components.pkl", 0],
-                          ["SMI Mid Components CHF.pkl", 0],
-                          ["Swiss Bonds ETF.pkl", 0],
-                          ["Swiss Bonds.pkl", 0,],
-                          ["Swiss Equities Emerging Market ETF.pkl", 0],
-                          ["Swiss Shares CHF.pkl", 0],
-                          ["Swiss Shares SMI Expanded.pkl", 0],
-                          ["Swiss Shares SMI Mid.pkl", 0],
-                          ["Swiss Shares SMI.pkl", 0],
-                          ["Swiss Shares.pkl", 0],
-                          ["Pietro.pkl", 0]
-     ]
+    def has(self, field_name: str) -> bool:
+        """Vérifie si une colonne existe"""
+        return any(col.get('field') == field_name for col in self.columns)
 
-    portfolio = PortfolioUtilities()
-    print(portfolio.FindIsin(["US8085247976"], portfolioStructure))
-    #portfolioUtilities.DisplayIsin(portfolioStructure)
-    #US8085247976
-    #IE00BFMXXD54
-    #CH1256123717
-    #CH0587304764
+    def index_of(self, field_name: str) -> int:
+        """Retourne l'index de la colonne, ou -1 si absente"""
+        for i, col in enumerate(self.columns):
+            if col.get('field') == field_name:
+                return i
+        return -1
+
+    def add_after(self, after_field: str, new_column: dict) :
+        """Ajoute une colonne après celle spécifiée"""
+        index = self.index_of(after_field)
+        if index == -1:
+            raise ValueError(f"Colonne '{after_field}' non trouvée")
+        self.columns.insert(index + 1, new_column)
+        return self.columns
+
+    def remove(self, field_name: str) :
+        """Supprime la première occurrence d'une colonne"""
+        index = self.index_of(field_name)
+        if index != -1:
+            self.columns.pop(index)
+        return self.columns
+
+    def remove_all(self, field_name: str):
+        """Supprime toutes les occurrences d'une colonne"""
+        self.columns = [col for col in self.columns if col.get('field') != field_name]
+        return self.columns
+
+    def get(self) -> list[dict]:
+        """Retourne la liste des colonnes actuelle"""
+        return self.columns.copy()
+
+    def __repr__(self):
+        return f"ColumnManager({self.columns})"
+
