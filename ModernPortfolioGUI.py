@@ -1,3 +1,5 @@
+import pandas as pd
+from datetime import datetime
 from anyio import sleep
 from nicegui import ui, events
 import Portfolio
@@ -13,15 +15,22 @@ class Gui():
     def __init__(self):
         if os.name != "Windows" and os.name != 'nt':
             self.path = Path("/Users/paul/Documents/Modern Portfolio Theory Data/")
+            self.workingPath = "/Users/paul/Documents/Modern Portfolio Theory Data/Data/"
             self.path2 = "/Users/paul/Documents/Modern Portfolio Theory Data/"
         else:
             self.path = Path("C:/Users/paul.milic/Modern Portfolio/")
+            self.workingPath = "C:/Users/paul.milic/Modern Portfolio/Data"
+        self.results = pd.DataFrame(columns=['Portfolio', 'Weight', 'Returns', 'Volatility', 'Sharpe', 'Data', 'OriginalData',
+                                             'Lowest Volatility', 'Lowest Returns', 'Lowest Sharpe', 'Timestamp'])
         self.parallelComputing = ParallelComputing.Parallel()
         self.portfolioStructure = []
         self.fileData = []
         self.assetsName = []
         self.fullAssetsList = []
         self.rowData = []
+        if os.path.exists(self.workingPath + "results.pkl"):
+            self.results = pd.read_pickle(self.workingPath + "results.pkl")
+
         self.columnDefs = [{'field': 'File name'}, {'field': 'Number of assets', 'editable': True}]
         with ui.tabs().classes('w-full') as tabs:
             self.one = ui.tab('Simulation')
@@ -34,7 +43,8 @@ class Gui():
                     self.spinner = ui.spinner(size='lg', color='primary')
                     self.spinner.visible = False  # Caché tant que pas en traitement
                     self.kelly = ui.switch('Kelly optimization', on_change=self.ChangeValue)
-                    self.Robust = ui.switch('Robust optimization')
+                    self.Robust = ui.switch('Robust optimization', on_change=self.ChangeValue)
+                    self.Sound = ui.switch("Sound", on_change=self.ChangeValue)
 
                 files = [f for f in os.listdir(self.path) if f.endswith('.pkl')]
                 files.sort()
@@ -51,9 +61,11 @@ class Gui():
                                 {"field": "returns lowest vol"},
                                 {"field": "lowest volatility"},
                                 {"field": "sharpe lowest vol"},
+                                {"field": "timestamp"}
                             ],
                             'rowData': self.rowData
-                        }).classes('max-h-40').style('width: 100%')
+                        }).classes('max-h-50').style('width: 100%').on('cellClicked', lambda event: self.FindPortfolio(event))
+
                         self.finalPortfolio = ui.aggrid({
                             'columnDefs': [
                                 {"field": "Asset name"},
@@ -92,7 +104,32 @@ class Gui():
                     'rowData': self.fullAssetsList
                 }).classes('max-h-300').style('width: 100%')
                 tabs.set_value(('Simulation'))
+        if os.path.exists(self.workingPath + "results.pkl"):
+            self.RefreshRowData()
         self.GetAllAssetsList()
+
+    def FindPortfolio(self, event):
+        pu = PortfolioUtilities.PortfolioUtilities()
+        self.assetsName.clear()
+        row = self.results[self.results['Timestamp'].apply(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]) ==
+                           event.args['data']['timestamp']]
+        i = 0
+        for isin in row['Portfolio']:
+            for ii in isin:
+                self.assetsName.append({"Asset name": pu.ReturnAssetDescription([ii])[0], "ISIN": ii, "Weight": row['Weight'].tolist()[0][i]})
+                i += 1
+        self.finalPortfolio.update()
+        self.displayGraph(row['OriginalData'])
+
+
+    def RefreshRowData(self):
+        for index, row in self.results.iterrows():
+            self.rowData.append(
+                {"returns": round(row['Returns'] * 100, 2), "volatility": round(row['Volatility'] * 100, 2),
+                 "sharpe": round(row['Sharpe'], 2), "returns lowest vol": round(row['Lowest Returns'] * 100, 2),
+                 "lowest volatility": round(row['Lowest Volatility'] * 100, 2),
+                 "sharpe lowest vol": round(row['Lowest Sharpe'], 2), "timestamp": row['Timestamp'].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]})
+        self.aggrid.update()
 
     def GetAllAssetsList(self):
         portfolioUtilities = PortfolioUtilities.PortfolioUtilities()
@@ -102,14 +139,14 @@ class Gui():
         self.fullAssets.update()
 
     def ChangeValue(self, event):
-        colManager = PortfolioUtilities.ColumnManager(self.finalPortfolio.props['options']['columnDefs'])
-        if event.value:
-            if not colManager.has('Kelly weight'):
-                self.finalPortfolio.props['options']['columnDefs'] = colManager.add_after("Weight", {"field": "Kelly weight"})
-        else:
-            if colManager.has(('Kelly weight')):
-                self.finalPortfolio.props['options']['columnDefs'] = colManager.remove_all("Kelly weight")
-
+        if event.sender.text == "Kelly optimization":
+            colManager = PortfolioUtilities.ColumnManager(self.finalPortfolio.props['options']['columnDefs'])
+            if event.value:
+                if not colManager.has('Kelly weight'):
+                    self.finalPortfolio.props['options']['columnDefs'] = colManager.add_after("Weight", {"field": "Kelly weight"})
+            else:
+                if colManager.has(('Kelly weight')):
+                    self.finalPortfolio.props['options']['columnDefs'] = colManager.remove_all("Kelly weight")
 
 
     def update_number_of_assets(self, nbAssets, fileName):
@@ -128,24 +165,8 @@ class Gui():
     def _on_cell_clicked(self, event):
         self.portfolioStructure = self.update_number_of_assets(event.args['data']['Number of assets'], event.args['data']['File name'])
 
-
-    def display_portfolio(self, bestPortfolio):
-        self.finalPortfolio.clear()
-        self.assetsName.clear()
-        portfolioUtilities = PortfolioUtilities.PortfolioUtilities()
-        self.rowData.append({"returns": round(bestPortfolio[2] * 100, 2), "volatility": round(bestPortfolio[3] * 100, 2),
-         "sharpe": round(bestPortfolio[4], 2), "returns lowest vol": round(bestPortfolio[8] * 100, 2),
-         "lowest volatility": round(bestPortfolio[7] * 100, 2), "sharpe lowest vol": round(bestPortfolio[9], 2)})
-        assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolio[0])
-        i = 0
-        for a in assetsDescription:
-            if self.kelly.value == True:
-                self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-1][i]})
-            else:
-                self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
-            i += 1
+    def displayGraph(self, localDef):
         self.ax.clear()
-        localDef = bestPortfolio[6][bestPortfolio[0]]
         for column in localDef.columns:
             self.ax.plot(localDef.index, localDef[column], label=column)
         self.ax.figure.canvas.draw()
@@ -154,14 +175,32 @@ class Gui():
         self.finalPortfolio.update()
         self.aggrid.update()
 
+
+    def display_portfolio(self, bestPortfolio):
+        self.finalPortfolio.clear()
+        self.assetsName.clear()
+        portfolioUtilities = PortfolioUtilities.PortfolioUtilities()
+        self.rowData.append({"returns": round(bestPortfolio[2] * 100, 2), "volatility": round(bestPortfolio[3] * 100, 2),
+         "sharpe": round(bestPortfolio[4], 2), "returns lowest vol": round(bestPortfolio[8] * 100, 2),
+         "lowest volatility": round(bestPortfolio[7] * 100, 2), "sharpe lowest vol": round(bestPortfolio[9], 2),
+         "timestamp": bestPortfolio[-1].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]})
+        assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolio[0])
+        i = 0
+        for a in assetsDescription:
+            if self.kelly.value == True:
+                self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-1][i]})
+            else:
+                self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
+            i += 1
+
+        self.displayGraph( bestPortfolio[6][bestPortfolio[0]])
+
     async def Simulate(self, nbOfSimulation, nbOfWeight):
         portfolio = Portfolio.ModernPortfolioTheory(nbOfSimulation, 2, 4)
         portfolio.nbOfSimulatedWeights = nbOfWeight
         data, isin = portfolio.BuilHeterogeneousPortfolio(self.portfolioStructure)
         if len(isin) == 0:
-            with self.fullAssets:
-                ui.notify("No Assets Class Selected")
-                return
+            return []
         showDensity = False
         isRandom = True
         bestPortfolios = await self.parallelComputing.run_select_random_assets_parallel(portfolio, data, isin, nbOfSimulation, self.portfolioStructure, showDensity, isRandom, [])
@@ -173,20 +212,35 @@ class Gui():
 
     async def Callback(self):
         try:
+            bestPortfolio = []
             self.btnSimulate.disable()
             self.spinner.visible = True
             await asyncio.sleep(0.3)
             bestPortfolio = await self.Simulate(int(self.nbOfSimulation.value), int(self.nbOfWeight.value))
+            if len(bestPortfolio) == 0:
+                with self.fullAssets:
+                    ui.notify("No Assets Class Selected")
+                    self.btnSimulate.enable()
+                    self.spinner.visible = False
+                return
         except Exception as e:
             print("💥 ERREUR pendant la simulation :", e)
             traceback.print_exc()
         finally:
             await ui.context.client.connected()
             await asyncio.sleep(1)
+            #self.results = pd.read_pickle(self.workingPath + "results.pkl")
+            bestPortfolio.append(datetime.now())
+            if not os.path.exists(self.workingPath + "results.pkl"):
+                self.results.loc[0] = bestPortfolio
+            else:
+                self.results.loc[len(self.results)] = bestPortfolio
+            self.results.to_pickle(self.workingPath + "results.pkl")
             self.btnSimulate.enable()
             self.spinner.visible = False
             self.display_portfolio(bestPortfolio)
-            self.a.play()
+            if self.Sound.value:
+                self.a.play()
         return bestPortfolio
 
     def handle_theme_change(self, e: events.ValueChangeEventArguments):
