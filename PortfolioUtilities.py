@@ -283,7 +283,6 @@ class PortfolioUtilities():
                 portfolio += [isin[k][i] for i in indices]
             k += 1
         k = 0
-        print(portfolio)
         return portfolio
 
 class ColumnManager:

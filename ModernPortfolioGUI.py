@@ -12,7 +12,7 @@ from pathlib import Path
 import KellyPortfolio
 
 class Gui():
-    def __init__(self):
+    def __init__(self, parallel, critical):
         if os.name != "Windows" and os.name != 'nt':
             self.path = Path("/Users/paul/Documents/Modern Portfolio Theory Data/")
             self.workingPath = "/Users/paul/Documents/Modern Portfolio Theory Data/Data/"
@@ -20,9 +20,9 @@ class Gui():
         else:
             self.path = Path("C:/Users/paul.milic/Modern Portfolio/")
             self.workingPath = "C:/Users/paul.milic/Modern Portfolio/Data"
-        self.results = pd.DataFrame(columns=['Portfolio', 'Weight', 'Returns', 'Volatility', 'Sharpe', 'Data', 'OriginalData',
-                                             'Lowest Volatility', 'Lowest Returns', 'Lowest Sharpe', 'Timestamp'])
-        self.parallelComputing = ParallelComputing.Parallel()
+        self.critical = critical
+        print("Gui:", id(self.critical))
+        self.parallelComputing = parallel
         self.portfolioStructure = []
         self.fileData = []
         self.assetsName = []
@@ -31,7 +31,7 @@ class Gui():
         if os.path.exists(self.workingPath + "results.pkl"):
             self.results = pd.read_pickle(self.workingPath + "results.pkl")
 
-        self.columnDefs = [{'field': 'File name'}, {'field': 'Number of assets', 'editable': True}]
+        self.columnDefs = [{'field': 'File name'}, {"field": "Selection", 'editable': True}, {'field': 'Number of assets'}, {'field': 'Size'}]
         with ui.tabs().classes('w-full') as tabs:
             self.one = ui.tab('Simulation')
             two = ui.tab('List of assets')
@@ -49,7 +49,8 @@ class Gui():
                 files = [f for f in os.listdir(self.path) if f.endswith('.pkl')]
                 files.sort()
                 for f in files:
-                    self.fileData.append({"File name": f, "Number of assets": 0})
+                    df = pd.read_pickle(self.path2 + f)
+                    self.fileData.append({"File name": f, "Selection": 0, "Number of assets": len(df.columns), "Size": self.taille_lisible(os.path.getsize(self.path2 + f))})
                 with ui.splitter(horizontal=False, reverse=False, value=40,
                                  on_change=lambda e: ui.notify(e.value)).style('width: 100%') as splitter:
                     with splitter.before:
@@ -65,7 +66,6 @@ class Gui():
                             ],
                             'rowData': self.rowData
                         }).classes('max-h-50').style('width: 100%').on('cellClicked', lambda event: self.FindPortfolio(event))
-
                         self.finalPortfolio = ui.aggrid({
                             'columnDefs': [
                                 {"field": "Asset name"},
@@ -73,7 +73,7 @@ class Gui():
                                 {"field": "Weight"}
                             ],
                             'rowData': self.assetsName
-                        }).classes('max-h-40').style('width: 100%')
+                        }).classes('max-h-50').style('width: 100%')
                         ui.switch('Dark', on_change=self.handle_theme_change)
                         self.btnSimulate = ui.button('Simulate', on_click=self.Callback)
                     with splitter.after:
@@ -105,30 +105,53 @@ class Gui():
                 }).classes('max-h-300').style('width: 100%')
                 tabs.set_value(('Simulation'))
         if os.path.exists(self.workingPath + "results.pkl"):
+            a=1
             self.RefreshRowData()
         self.GetAllAssetsList()
+
+    def taille_lisible(self, octets):
+        for unite in ['B', 'Ko', 'Mo', 'Go', 'To']:
+            if octets < 1024:
+                return f"{octets:.2f} {unite}"
+            octets /= 1024
+        return f"{octets:.2f} Po"  # Si t’es dans l’espace
+
+    def chercher_rec(self, obj, cible):
+        if isinstance(obj, list):
+            for el in obj:
+                if self.chercher_rec(el, cible):
+                    return True
+        else:
+            if isinstance(obj, datetime):
+                return obj.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] == cible
+            else:
+                return False
+        return False
 
     def FindPortfolio(self, event):
         pu = PortfolioUtilities.PortfolioUtilities()
         self.assetsName.clear()
-        row = self.results[self.results['Timestamp'].apply(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]) ==
-                           event.args['data']['timestamp']]
+        mainRow = self.results[self.results["Portfolio"].apply(lambda x: self.chercher_rec(x, event.args['data']['timestamp']))]
+        row = list(mainRow.Portfolio)[0]
+        mainRow = list(mainRow.Portfolio)
         i = 0
-        for isin in row['Portfolio']:
-            for ii in isin:
-                self.assetsName.append({"Asset name": pu.ReturnAssetDescription([ii])[0], "ISIN": ii, "Weight": row['Weight'].tolist()[0][i]})
-                i += 1
+        for isin in row[0]:
+            self.assetsName.append({"Asset name": pu.ReturnAssetDescription([isin])[0], "ISIN": isin, "Weight": row[1][i]})
+            i += 1
         self.finalPortfolio.update()
-        self.displayGraph(row['OriginalData'])
-
+        self.displayGraph(row[6])
 
     def RefreshRowData(self):
         for index, row in self.results.iterrows():
-            self.rowData.append(
-                {"returns": round(row['Returns'] * 100, 2), "volatility": round(row['Volatility'] * 100, 2),
-                 "sharpe": round(row['Sharpe'], 2), "returns lowest vol": round(row['Lowest Returns'] * 100, 2),
-                 "lowest volatility": round(row['Lowest Volatility'] * 100, 2),
-                 "sharpe lowest vol": round(row['Lowest Sharpe'], 2), "timestamp": row['Timestamp'].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]})
+            try:
+                p = row.Portfolio
+                self.rowData.append(
+                    {"returns": round(p[2] * 100, 2), "volatility": round(p[3] * 100, 2),
+                     "sharpe": round(p[4], 2), "returns lowest vol": round(p[8] * 100, 2),
+                     "lowest volatility": round(p[7] * 100, 2),
+                     "sharpe lowest vol": round(p[9], 2), "timestamp": p[11].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]})
+            except Exception as a:
+                print("RefreshRowData", a)
         self.aggrid.update()
 
     def GetAllAssetsList(self):
@@ -158,12 +181,12 @@ class Gui():
         for row in self.fileData:
             file_name = row.get('File name')
             if file_name == fileName:
-                row['Number of assets'] = nbAssets
+                row['Selection'] = nbAssets
                 break
-        return [[row['File name'], row['Number of assets']] for row in self.fileData]
+        return [[row['File name'], row["Selection"], row['Number of assets'], row['Size']] for row in self.fileData]
 
     def _on_cell_clicked(self, event):
-        self.portfolioStructure = self.update_number_of_assets(event.args['data']['Number of assets'], event.args['data']['File name'])
+        self.portfolioStructure = self.update_number_of_assets(event.args['data']['Selection'], event.args['data']['File name'])
 
     def displayGraph(self, localDef):
         self.ax.clear()
@@ -188,7 +211,7 @@ class Gui():
         i = 0
         for a in assetsDescription:
             if self.kelly.value == True:
-                self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-1][i]})
+                self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-2][i]})
             else:
                 self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
             i += 1
@@ -196,7 +219,7 @@ class Gui():
         self.displayGraph( bestPortfolio[6][bestPortfolio[0]])
 
     async def Simulate(self, nbOfSimulation, nbOfWeight):
-        portfolio = Portfolio.ModernPortfolioTheory(nbOfSimulation, 2, 4)
+        portfolio = Portfolio.ModernPortfolioTheory(nbOfSimulation, 2, 4, self.critical)
         portfolio.nbOfSimulatedWeights = nbOfWeight
         data, isin = portfolio.BuilHeterogeneousPortfolio(self.portfolioStructure)
         if len(isin) == 0:
@@ -208,6 +231,8 @@ class Gui():
             kelly = KellyPortfolio.KellyCriterion()
             kellyResult =  kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns))
             bestPortfolios.append(list(kellyResult))
+        else:
+            bestPortfolios.append([])
         return bestPortfolios
 
     async def Callback(self):
@@ -232,13 +257,13 @@ class Gui():
             #self.results = pd.read_pickle(self.workingPath + "results.pkl")
             bestPortfolio.append(datetime.now())
             if not os.path.exists(self.workingPath + "results.pkl"):
-                self.results.loc[0] = bestPortfolio
-            else:
-                self.results.loc[len(self.results)] = bestPortfolio
-            self.results.to_pickle(self.workingPath + "results.pkl")
+                self.results = pd.DataFrame(columns=["Portfolios"], dtype=object)
+            self.results = pd.concat([self.results, pd.DataFrame([{"Portfolio": bestPortfolio}])], ignore_index=True)
+            if not len(bestPortfolio) == 1:
+                self.results.to_pickle(self.workingPath + "results.pkl")
+                self.display_portfolio(bestPortfolio)
             self.btnSimulate.enable()
             self.spinner.visible = False
-            self.display_portfolio(bestPortfolio)
             if self.Sound.value:
                 self.a.play()
         return bestPortfolio
@@ -247,7 +272,36 @@ class Gui():
         self.aggrid.classes(add='ag-theme-balham-dark' if e.value else 'ag-theme-balham',
                      remove='ag-theme-balham ag-theme-balham-dark')
 
-gui = Gui()
-# ⏳ Démarre le listener dès que possible
-ui.timer(0.1, lambda: asyncio.create_task(gui.parallelComputing.start_listener(gui)), once=True)
+critical = ParallelComputing.Critical(0)
+parallel = ParallelComputing.Parallel(critical)
+
+async def chef_dorchestre(gui):
+    asyncio.create_task(parallel.start_listener(gui))
+    await asyncio.create_task(parallel.message_queue.put("Tâche lancée depuis GUI !"))
+
+@ui.page('/')
+async def main_page():
+    # on crée la grille (ou l’onglet) utilisé pour notifier
+    app_gui = Gui(parallel, critical)
+    tab = app_gui.one
+    client = ui.context.client
+
+    async def start_for_client() -> None:
+        """Lance start_listener pour ce client."""
+        # si jamais on en avait déjà une, annule-la
+        if hasattr(client, 'listener_task'):
+            client.listener_task.cancel()
+        # recrée et stocke la Task
+        client.listener_task = asyncio.create_task(parallel.start_listener(tab))
+
+    # 1) au premier chargement de page, on démarre le listener
+    await start_for_client()
+    # 2) si le client se déconnecte, on annule la tâche
+    client.on_disconnect(lambda: client.listener_task.cancel())
+    # 3) si le client se reconnecte, on relance le listener
+    client.on_connect(lambda: asyncio.create_task(start_for_client()))
+
+    # enfin on peut poster les premiers messages
+    await parallel.message_queue.put("Tâche lancée depuis GUI !")
+
 ui.run()
