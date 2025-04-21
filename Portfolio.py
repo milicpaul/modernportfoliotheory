@@ -5,7 +5,7 @@ import os
 import PortfolioUtilities as pu
 import multiprocessing
 import sys
-import asyncio
+import ParallelComputing
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -14,48 +14,46 @@ class ModernPortfolioTheory():
     path = ""
     sharpeRatio = 2
 
-    def __init__(self, nbOfSimulatedWeights, threshold, sharpeRatio, critical):
+    def __init__(self, nbOfSimulatedWeights, threshold, sharpeRatio, parallel: ParallelComputing):
         if os.name != "Windows" and os.name != 'nt':
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
         else:
             self.path = "C:/Users/paul.milic/Modern Portfolio/"
-        self.critical = critical
         self.nbOfSimulatedWeights = nbOfSimulatedWeights
         self.threshold = threshold
         self.sharpeRatio = sharpeRatio
-
-    def SetParallel(self, parallel):
         self.parallel = parallel
 
     def UpAndDownVolatility(self, data):
         return np.std(data[data < 0], ddof=1), np.std(data[data > 0], ddof=1)
 
-    def MoveInSphere(self, w, epsilon=0.009):
+    @staticmethod
+    def MoveInSphere(w, epsilon=0.009):
         """Déplace w dans une petite boule de rayon epsilon et renormalise."""
         perturbation = np.random.uniform(-epsilon, epsilon, len(w))  # Bruit aléatoire
         new_w = w + perturbation  # Ajoute la perturbation
         new_w = np.clip(new_w, 0, 1)  # S'assure que les valeurs restent entre 0 et 1
         return np.round(new_w, 3)
 
-    def Volatility(self, returns, optimization, epsilonIncrease, bestWeights):
+    @staticmethod
+    def Volatility(returns, optimization, epsilonIncrease, bestWeights):
         highestReturn = 0
         highestVolatility = 0
         highestSharpe = 0
         lowerVolatility = sys.maxsize
         returnsLowerVolatility = 0
         sharpeLowerVolatility = 0
-
         index = 0
         i = 0
         weightsList = []
         try:
             mean_returns = returns.mean() * 252  # Rendement moyen annuel
             cov_matrix = returns.cov() * 252  # Matrice de covariance annuelle
-            while i < self.nbOfSimulatedWeights:
+            while i < 10000:
                 if not optimization:
-                    weightsList.append(self.generate_weights(len(returns.columns)))
+                    weightsList.append(ModernPortfolioTheory.generate_weights(len(returns.columns)))
                 else:
-                    weightsList.append(self.MoveInSphere(bestWeights, 0.009 + epsilonIncrease))
+                    weightsList.append(ModernPortfolioTheory.MoveInSphere(bestWeights, 0.009 + epsilonIncrease))
                 portfolio_return = np.sum(weightsList[-1] * mean_returns)
                 portfolio_volatility = np.sqrt(np.dot(weightsList[-1].T, np.dot(cov_matrix, weightsList[-1])))
                 if portfolio_volatility < lowerVolatility:
@@ -67,10 +65,9 @@ class ModernPortfolioTheory():
                     highestReturn = portfolio_return
                     highestVolatility = portfolio_volatility
                     index = i
-                    stop = portfolio_volatility >= self.threshold
                 i += 1
         except Exception as a:
-            print("Volatility error:", a)
+            pass
         return weightsList[index], highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLowerVolatility, sharpeLowerVolatility
 
     def FindInSphere(self, data, weight, nbOfSimulation):
@@ -95,7 +92,8 @@ class ModernPortfolioTheory():
             fullData = fullData.loc[:, ~fullData.columns.duplicated()]
         return fullData, assets
 
-    def generate_weights(self, n, min_val=0.01, max_val=0.9):
+    @staticmethod
+    def generate_weights(n, min_val=0.01, max_val=0.9):
         alpha = np.ones(n)  # Distribution équilibrée
         vecteur = np.random.dirichlet(alpha, size=1)[0]
         vecteur = 0.01 + vecteur * (0.9 - 0.01)
@@ -105,31 +103,19 @@ class ModernPortfolioTheory():
         vecteur[indice_max] += erreur
         return np.round(vecteur, 2)
 
-    async def RunAsynch(self, j):
-        await asyncio.create_task(self.parallel.message_queue.put(f"Simulation {j + 1}"))
-
-    def appel_async_sans_attendre(self, coro):
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # pas de boucle active → on en crée une pour cet appel
-            asyncio.run(coro)
-        else:
-            # boucle déjà en cours → on poste la tâche sans attendre
-            asyncio.create_task(coro)
-
-    def SelectRandomAssets(self, data, isin, nbOfSimulation, percentage, process, showDensity=True, random=True, localPortfolio=[]):
+    @staticmethod
+    def SelectRandomAssets(data, isin, nbOfSimulation, percentage, queueResults, queueMessages, showDensity=False, random=True, localPortfolio=[]):
         portfolioU = pu.PortfolioUtilities()
         timeSeries = data
         data = data.pct_change(fill_method=None)
         bestPortfolios = []
         for j in range(nbOfSimulation):
-            self.critical.SetSimulationNumber(j + 1)
-            print(f"\rSimulation # : {j+1}", end="", flush=True)
+            #print(f"\rSimulation # : {j+1}", end="", flush=True)
+            queueMessages.put(f"[SelectRandom]Starting Simulation {j}, Process id {os.getpid()}")
             enoughData = False
             while not enoughData:
                 if random:
-                    portfolio = portfolioU.ReturnRandomPortfolio(percentage, isin, process)
+                    portfolio = portfolioU.ReturnRandomPortfolio(percentage, isin)
                 else:
                     portfolio = localPortfolio
                 portfolioLength = len(portfolio)
@@ -141,11 +127,10 @@ class ModernPortfolioTheory():
             weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = self.Volatility(currentData, False, 0, [])
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
-            bestPortfolios.append(
-                [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
-                 originalData, lowerVolatility, returnsLower, sharpeLower])
-        self.critical.SetSimulationNumber(0)
-        return bestPortfolios[np.argmax(list(zip(*bestPortfolios))[self.sharpeRatio])]
+            bestPortfolios.append([portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
+                originalData, lowerVolatility, returnsLower, sharpeLower])
+        queueMessages.put(f"[SelectRandom]Ending Simulation, Process id {os.getpid()}")
+        queueResults.put(bestPortfolios[np.argmax(list(zip(*bestPortfolios))[self.sharpeRatio])])
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
         bestPortfolios = []
@@ -165,34 +150,12 @@ class ModernPortfolioTheory():
                 fullPortfolio[j][1] = v[j]
             data, isin = self.BuilHeterogeneousPortfolio(fullPortfolio)
             bestPortfolio = self.SelectRandomAssets(data, isin, 1, self.portfolioStructure, False)
-            #print(pu.ReturnAssetDescription(bestPortfolio[0]))
 
 def main():
-    portfolioStructure = [["AEX Netherland.pkl", 0],
-                          ["CAC 40.pkl", 0],
-                          ["DAX40.pkl", 0],
-                          ["Dow Jones.pkl", 0],
-                          ["ETF CHF.pkl", 2],
-                          ["ETF CHF_positive_variance_.pkl", 0],
-                          ["ETF Equity Developed Markets CHF.pkl", 0],
-                          ["ETF MSCI World.pkl", 0],
-                          ["ETF Swiss Bonds.pkl", 0],
-                          ["ETF Swiss Commodities CHF.pkl", 0],
-                          ["FTSE Mib.pkl", 0],
-                          ["NASDAQ100.pkl", 0],
-                          ["SMI Components.pkl", 2],
-                          ["SMI Mid Components CHF.pkl", 0],
-                          ["Swiss Bonds ETF.pkl", 2],
-                          ["Swiss Bonds.pkl", 2, ],
-                          ["Swiss Equities Emerging Market ETF.pkl", 0],
-                          ["Swiss Shares CHF.pkl", 0],
-                          ["Swiss Shares SMI Expanded.pkl", 0],
-                          ["Swiss Shares SMI Mid.pkl", 2],
-                          ["Swiss Shares SMI.pkl", 0],
-                          ["Swiss Shares.pkl", 0],
-                          ["Pietro.pkl", 0]]
-
+    a = 1
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()  # Nécessaire si tu crées un exécutable avec PyInstaller
     main()
+else:
+    pass

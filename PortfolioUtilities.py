@@ -269,10 +269,10 @@ class PortfolioUtilities():
         assets = pd.read_csv(fileName, on_bad_lines="skip", encoding_errors="ignore", sep=";")
         assets.to_pickle("C:/Users/paul.milic/Modern Portfolio/ETF Swiss Equity Themes.pkl")
 
-    def ReturnRandomPortfolio(self, percentage, isin, process):
+    def ReturnRandomPortfolio(self, percentage, isin):
         k = 0
         portfolio = []  # random portfolio
-        localRandom = random.Random(time.time_ns() + process + id(threading.current_thread()))
+        localRandom = random.Random(time.time_ns() + id(threading.current_thread()))
         for p in percentage:
             if p[1] > 0:
                 if len(isin[k]) < percentage[k][1]:

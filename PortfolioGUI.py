@@ -1,18 +1,24 @@
+from tkinter import Event
+
 import pandas as pd
 from datetime import datetime
-from anyio import sleep
 from nicegui import ui, events
 import Portfolio
 import PortfolioUtilities
 import ParallelComputing
-import asyncio
 import traceback
 import os
 from pathlib import Path
 import KellyPortfolio
+from multiprocessing import Process, Event, Queue, set_start_method
+import threading
+import time
+import multiprocessing
 
 class Gui():
-    def __init__(self, parallel, critical):
+
+    def __init__(self, parallel: ParallelComputing):
+        self.parallel = parallel
         if os.name != "Windows" and os.name != 'nt':
             self.path = Path("/Users/paul/Documents/Modern Portfolio Theory Data/")
             self.workingPath = "/Users/paul/Documents/Modern Portfolio Theory Data/Data/"
@@ -20,9 +26,6 @@ class Gui():
         else:
             self.path = Path("C:/Users/paul.milic/Modern Portfolio/")
             self.workingPath = "C:/Users/paul.milic/Modern Portfolio/Data"
-        self.critical = critical
-        print("Gui:", id(self.critical))
-        self.parallelComputing = parallel
         self.portfolioStructure = []
         self.fileData = []
         self.assetsName = []
@@ -38,7 +41,7 @@ class Gui():
         with ui.tab_panels(tabs, value=two).classes('w-full'):
             with ui.tab_panel(self.one):
                 with ui.row():
-                    self.nbOfSimulation = ui.input(label='Nb of portfolios simulation:', value='1')
+                    self.nbOfSimulation = ui.input(label='Nb of portfolios simulation:', value='5')
                     self.nbOfWeight = ui.input(label='Nb of weight by simulation:', value='10000')
                     self.spinner = ui.spinner(size='lg', color='primary')
                     self.spinner.visible = False  # Caché tant que pas en traitement
@@ -52,8 +55,8 @@ class Gui():
                     df = pd.read_pickle(self.path2 + f)
                     self.fileData.append({"File name": f, "Selection": 0, "Number of assets": len(df.columns), "Size": self.taille_lisible(os.path.getsize(self.path2 + f))})
                 with ui.splitter(horizontal=False, reverse=False, value=40,
-                                 on_change=lambda e: ui.notify(e.value)).style('width: 100%') as splitter:
-                    with splitter.before:
+                                 on_change=lambda e: ui.notify(e.value)).style('width: 100%') as self.splitter:
+                   with self.splitter.before:
                         self.aggrid = ui.aggrid({
                             'columnDefs': [
                                 {"field": "returns"},
@@ -74,9 +77,10 @@ class Gui():
                             ],
                             'rowData': self.assetsName
                         }).classes('max-h-50').style('width: 100%')
+                        self.EventsTable()
                         ui.switch('Dark', on_change=self.handle_theme_change)
                         self.btnSimulate = ui.button('Simulate', on_click=self.Callback)
-                    with splitter.after:
+                   with self.splitter.after:
                         self.aggrid2 = ui.aggrid({
                             'columnDefs':
                                 self.columnDefs,
@@ -107,7 +111,19 @@ class Gui():
         if os.path.exists(self.workingPath + "results.pkl"):
             a=1
             self.RefreshRowData()
-        self.GetAllAssetsList()
+        #self.GetAllAssetsList()
+
+    def EventsTable(self):
+        columns = [
+            {'name': 'origin', 'label': 'Origin', 'field': 'origin', 'required': True, 'align': 'left', 'sortable': True},
+            {'name': 'event', 'label': 'Event', 'field': 'event', 'sortable': True},
+        ]
+        rows = [
+            {'origin': 'Alice', 'event': 18},
+            {'origin': 'Bob', 'event': 21},
+            {'origin': 'Carol', 'event': 10},
+        ]
+        self.eventsTable = ui.table(columns=columns, rows=rows, row_key='name')
 
     def taille_lisible(self, octets):
         for unite in ['B', 'Ko', 'Mo', 'Go', 'To']:
@@ -218,15 +234,17 @@ class Gui():
 
         self.displayGraph( bestPortfolio[6][bestPortfolio[0]])
 
-    async def Simulate(self, nbOfSimulation, nbOfWeight):
-        portfolio = Portfolio.ModernPortfolioTheory(nbOfSimulation, 2, 4, self.critical)
+    def Simulate(self, nbOfSimulation, nbOfWeight):
+        showDensity = False
+        isRandom = True
+
+        portfolio = Portfolio.ModernPortfolioTheory(nbOfSimulation, 2, 4, self.parallel)
         portfolio.nbOfSimulatedWeights = nbOfWeight
         data, isin = portfolio.BuilHeterogeneousPortfolio(self.portfolioStructure)
         if len(isin) == 0:
             return []
-        showDensity = False
-        isRandom = True
-        bestPortfolios = await self.parallelComputing.run_select_random_assets_parallel(portfolio, data, isin, nbOfSimulation, self.portfolioStructure, showDensity, isRandom, [])
+        bestPortfolios = self.parallel.run_select_random_assets_parallel(portfolio, data, isin, nbOfSimulation,
+                                           self.portfolioStructure, showDensity, isRandom, [])
         if self.kelly.value == True:
             kelly = KellyPortfolio.KellyCriterion()
             kellyResult =  kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns))
@@ -235,13 +253,12 @@ class Gui():
             bestPortfolios.append([])
         return bestPortfolios
 
-    async def Callback(self):
+    def Callback(self):
         try:
             bestPortfolio = []
             self.btnSimulate.disable()
             self.spinner.visible = True
-            await asyncio.sleep(0.3)
-            bestPortfolio = await self.Simulate(int(self.nbOfSimulation.value), int(self.nbOfWeight.value))
+            bestPortfolio = self.Simulate(int(self.nbOfSimulation.value), int(self.nbOfWeight.value))
             if len(bestPortfolio) == 0:
                 with self.fullAssets:
                     ui.notify("No Assets Class Selected")
@@ -252,8 +269,6 @@ class Gui():
             print("💥 ERREUR pendant la simulation :", e)
             traceback.print_exc()
         finally:
-            await ui.context.client.connected()
-            await asyncio.sleep(1)
             #self.results = pd.read_pickle(self.workingPath + "results.pkl")
             bestPortfolio.append(datetime.now())
             if not os.path.exists(self.workingPath + "results.pkl"):
@@ -272,36 +287,26 @@ class Gui():
         self.aggrid.classes(add='ag-theme-balham-dark' if e.value else 'ag-theme-balham',
                      remove='ag-theme-balham ag-theme-balham-dark')
 
-critical = ParallelComputing.Critical(0)
-parallel = ParallelComputing.Parallel(critical)
+def update_ui(obj, event, queue):
+    while True:
+        event.wait()
+        print("on recoit quelque chose")
+        try:
+            message = queue.get_nowait()
+            obj.notify(message)
+        except:
+            obj.notify("[Main] Signal received, but queue is empty")
+        event.clear()
+        time.sleep(1)
 
-async def chef_dorchestre(gui):
-    asyncio.create_task(parallel.start_listener(gui))
-    await asyncio.create_task(parallel.message_queue.put("Tâche lancée depuis GUI !"))
 
 @ui.page('/')
 async def main_page():
     # on crée la grille (ou l’onglet) utilisé pour notifier
-    app_gui = Gui(parallel, critical)
-    tab = app_gui.one
-    client = ui.context.client
-
-    async def start_for_client() -> None:
-        """Lance start_listener pour ce client."""
-        # si jamais on en avait déjà une, annule-la
-        if hasattr(client, 'listener_task'):
-            client.listener_task.cancel()
-        # recrée et stocke la Task
-        client.listener_task = asyncio.create_task(parallel.start_listener(tab))
-
-    # 1) au premier chargement de page, on démarre le listener
-    await start_for_client()
-    # 2) si le client se déconnecte, on annule la tâche
-    client.on_disconnect(lambda: client.listener_task.cancel())
-    # 3) si le client se reconnecte, on relance le listener
-    client.on_connect(lambda: asyncio.create_task(start_for_client()))
-
-    # enfin on peut poster les premiers messages
-    await parallel.message_queue.put("Tâche lancée depuis GUI !")
+    multiprocessing.set_start_method('spawn', force=True)
+    parallel = ParallelComputing.Parallel()
+    app_gui = Gui(parallel)
+    splitter = app_gui.splitter
+    threading.Thread(target=update_ui, args=(splitter, parallel.event, parallel.queueMessages), daemon=True).start()
 
 ui.run()
