@@ -1,6 +1,8 @@
 import multiprocessing
+import time
 from multiprocessing import Process, Event, Queue, set_start_method, Manager
 import numpy as np
+import os
 
 class Parallel:
 
@@ -16,10 +18,10 @@ class Parallel:
         cpu_count = multiprocessing.cpu_count()
         """Exécute la simulation dans plusieurs processus."""
         workers = [Process(target=portfolio.SelectRandomAssets, args=(data, isin, nbOfSimulation,
-                           percentage, self.queueResults, self.queueMessages, showDensity, isRandom, [])) for i in range(1)]
+                           percentage, self.queueResults, self.queueMessages, self.event, showDensity, isRandom, [])) for i in range(multiprocessing.cpu_count() - 1)]
         i = 0
         for w in workers:
-            self.queueMessages.put(f"[Run Select Random]Starting Process {i}")
+            self.queueMessages.put(f"[Parallel Computing]Starting Process {os.getpid()}")
             w.start()
         for w in workers:
             w.join()

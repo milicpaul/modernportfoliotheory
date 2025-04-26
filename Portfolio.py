@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pandas as pd
 import random
@@ -36,7 +38,7 @@ class ModernPortfolioTheory():
         return np.round(new_w, 3)
 
     @staticmethod
-    def Volatility(returns, optimization, epsilonIncrease, bestWeights):
+    def Volatility(returns, optimization, epsilonIncrease, bestWeights, event, queueMessages):
         highestReturn = 0
         highestVolatility = 0
         highestSharpe = 0
@@ -49,7 +51,7 @@ class ModernPortfolioTheory():
         try:
             mean_returns = returns.mean() * 252  # Rendement moyen annuel
             cov_matrix = returns.cov() * 252  # Matrice de covariance annuelle
-            while i < 10000:
+            while i < 50000:
                 if not optimization:
                     weightsList.append(ModernPortfolioTheory.generate_weights(len(returns.columns)))
                 else:
@@ -66,6 +68,11 @@ class ModernPortfolioTheory():
                     highestVolatility = portfolio_volatility
                     index = i
                 i += 1
+                if i%500 == 0:
+                    while not queueMessages.empty():
+                        print("on vide la queue")
+                        event.set()
+                        time.sleep(0.5)
         except Exception as a:
             pass
         return weightsList[index], highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLowerVolatility, sharpeLowerVolatility
@@ -104,14 +111,15 @@ class ModernPortfolioTheory():
         return np.round(vecteur, 2)
 
     @staticmethod
-    def SelectRandomAssets(data, isin, nbOfSimulation, percentage, queueResults, queueMessages, showDensity=False, random=True, localPortfolio=[]):
+    def SelectRandomAssets(data, isin, nbOfSimulation, percentage, queueResults, queueMessages, event, showDensity=False, random=True, localPortfolio=[]):
         portfolioU = pu.PortfolioUtilities()
         timeSeries = data
         data = data.pct_change(fill_method=None)
         bestPortfolios = []
+        queueMessages.put_nowait(f"[Portfolio]Starting Simulation, Process id {os.getpid()}")
+        event.set()
         for j in range(nbOfSimulation):
-            #print(f"\rSimulation # : {j+1}", end="", flush=True)
-            queueMessages.put(f"[SelectRandom]Starting Simulation {j}, Process id {os.getpid()}")
+            queueMessages.put(f"[Portfolio]Running Simulation, Process id {os.getpid()}, simulation {j}")
             enoughData = False
             while not enoughData:
                 if random:
@@ -124,13 +132,16 @@ class ModernPortfolioTheory():
                                            currentData.index <= pd.to_datetime('2025-04-15'))]
                 originalData = timeSeries[portfolio]
                 enoughData = currentData.shape[1] == portfolioLength
-            weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = self.Volatility(currentData, False, 0, [])
+            weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages)
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
             bestPortfolios.append([portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
                 originalData, lowerVolatility, returnsLower, sharpeLower])
-        queueMessages.put(f"[SelectRandom]Ending Simulation, Process id {os.getpid()}")
-        queueResults.put(bestPortfolios[np.argmax(list(zip(*bestPortfolios))[self.sharpeRatio])])
+        queueMessages.put_nowait(f"[Portfolio]Ending Simulation, Process id {os.getpid()}")
+        while not queueMessages.empty():
+            print("on vide la queue")
+            event.set()
+        queueResults.put(bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])])
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
         bestPortfolios = []

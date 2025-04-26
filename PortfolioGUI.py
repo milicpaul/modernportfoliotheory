@@ -1,8 +1,8 @@
 from tkinter import Event
-
+import psutil
 import pandas as pd
 from datetime import datetime
-from nicegui import ui, events
+from nicegui import ui, events, run
 import Portfolio
 import PortfolioUtilities
 import ParallelComputing
@@ -16,7 +16,6 @@ import time
 import multiprocessing
 
 class Gui():
-
     def __init__(self, parallel: ParallelComputing):
         self.parallel = parallel
         if os.name != "Windows" and os.name != 'nt':
@@ -35,95 +34,115 @@ class Gui():
             self.results = pd.read_pickle(self.workingPath + "results.pkl")
 
         self.columnDefs = [{'field': 'File name'}, {"field": "Selection", 'editable': True}, {'field': 'Number of assets'}, {'field': 'Size'}]
-        with ui.tabs().classes('w-full') as tabs:
-            self.one = ui.tab('Simulation')
-            two = ui.tab('List of assets')
-        with ui.tab_panels(tabs, value=two).classes('w-full'):
-            with ui.tab_panel(self.one):
+        with ui.splitter(value=60).style('width: 100%') as splitterTop:
+            with splitterTop.before:
                 with ui.row():
-                    self.nbOfSimulation = ui.input(label='Nb of portfolios simulation:', value='5')
-                    self.nbOfWeight = ui.input(label='Nb of weight by simulation:', value='10000')
-                    self.spinner = ui.spinner(size='lg', color='primary')
-                    self.spinner.visible = False  # Caché tant que pas en traitement
-                    self.kelly = ui.switch('Kelly optimization', on_change=self.ChangeValue)
-                    self.Robust = ui.switch('Robust optimization', on_change=self.ChangeValue)
+                    self.nbOfSimulation = ui.input(label='Portfolios simulation:', value='5')
+                    self.nbOfWeight = ui.input(label='Weights by simulation:', value='10000')
+                    self.kelly = ui.switch('Kelly ', on_change=self.ChangeValue)
+                    self.Robust = ui.switch('Robust', on_change=self.ChangeValue)
                     self.Sound = ui.switch("Sound", on_change=self.ChangeValue)
+                    self.ShowLog = ui.switch("Show log")
+                with ui.row():
+                    mem = psutil.virtual_memory()
+                    self.label_total = ui.label(f"Tot: {mem.total / (1024 ** 3):.2f} Go")
+                    self.label_available = ui.label(f"Avalaible: {mem.available / (1024 ** 3):.2f} Go")
+                    self.label_used = ui.label(f"Used: {mem.used / (1024 ** 3):.2f} Go")
+                    self.label_percent = ui.label(f"RAM: {mem.percent}%")
+                    self.label_process = ui.label()
+                    self.queue_size = ui.label()
 
+            with splitterTop.after:
+                with ui.row():
+                    with ui.card().style('width: 500px; height: 120px;'):  # <<<<<< ICI, tu ajustes la taille
+                        self.process_graph = self.ProcessGraph()
+        with ui.splitter(horizontal=False, reverse=False, value=45,
+                         on_change=lambda e: ui.notify(e.value)).style('width: 100%') as self.splitter:
+            with self.splitter.before:
                 files = [f for f in os.listdir(self.path) if f.endswith('.pkl')]
                 files.sort()
                 for f in files:
                     df = pd.read_pickle(self.path2 + f)
                     self.fileData.append({"File name": f, "Selection": 0, "Number of assets": len(df.columns), "Size": self.taille_lisible(os.path.getsize(self.path2 + f))})
-                with ui.splitter(horizontal=False, reverse=False, value=40,
-                                 on_change=lambda e: ui.notify(e.value)).style('width: 100%') as self.splitter:
-                   with self.splitter.before:
-                        self.aggrid = ui.aggrid({
-                            'columnDefs': [
-                                {"field": "returns"},
-                                {"field": "volatility"},
-                                {"field": "sharpe", "filter": 'agTextColumnFilter', 'floatingFilter': True},
-                                {"field": "returns lowest vol"},
-                                {"field": "lowest volatility"},
-                                {"field": "sharpe lowest vol"},
-                                {"field": "timestamp"}
-                            ],
-                            'rowData': self.rowData
-                        }).classes('max-h-50').style('width: 100%').on('cellClicked', lambda event: self.FindPortfolio(event))
-                        self.finalPortfolio = ui.aggrid({
-                            'columnDefs': [
-                                {"field": "Asset name"},
-                                {"field": "ISIN"},
-                                {"field": "Weight"}
-                            ],
-                            'rowData': self.assetsName
-                        }).classes('max-h-50').style('width: 100%')
-                        self.EventsTable()
-                        ui.switch('Dark', on_change=self.handle_theme_change)
-                        self.btnSimulate = ui.button('Simulate', on_click=self.Callback)
-                   with self.splitter.after:
-                        self.aggrid2 = ui.aggrid({
-                            'columnDefs':
-                                self.columnDefs,
-                            'rowData':
-                                self.fileData
-                        }).classes('max-h-80')
-                        self.aggrid2.on('cellValueChanged', self._on_cell_clicked)
-                        self.myGraph = ui.matplotlib(figsize=(9, 5))
-                        self.ax = self.myGraph.figure.gca()
-                        self.ax.set_title("Données issues d'un DataFrame")
-                        self.ax.set_xlabel("x")
-                        self.ax.set_ylabel("Valeurs")
+                self.aggrid = ui.aggrid({
+                    'columnDefs': [
+                        {"field": "returns"},
+                        {"field": "volatility"},
+                        {"field": "sharpe", "filter": 'agTextColumnFilter', 'floatingFilter': True},
+                        {"field": "returns lowest vol"},
+                        {"field": "lowest volatility"},
+                        {"field": "sharpe lowest vol"},
+                        {"field": "timestamp"}
+                    ],
+                    'rowData': self.rowData
+                    }).classes('max-h-50').style('width: 98%').on('cellClicked', lambda event: self.FindPortfolio(event))
+                self.spinner = ui.spinner(size='lg', color='primary').classes("items-centered")
+                self.spinner.visible = False  # Caché tant que pas en traitement
+                self.finalPortfolio = ui.aggrid({
+                    'columnDefs': [
+                        {"field": "Asset name"},
+                        {"field": "ISIN"},
+                        {"field": "Weight"}
+                    ],
+                    'rowData': self.assetsName
+                }).classes('max-h-50').style('width: 98%')
+                ui.switch('Dark', on_change=self.handle_theme_change)
+                self.btnSimulate = ui.button('Simulate', on_click=self.Callback)
+                ui.separator()
+            with self.splitter.after:
+                self.aggrid2 = ui.aggrid({
+                    'columnDefs':
+                        self.columnDefs,
+                    'rowData':
+                        self.fileData
+                }).classes('max-h-80')
+                self.log = ui.log(max_lines=10000).classes('w-full h-30').bind_visibility_from(self.ShowLog, 'value')
+                self.aggrid2.on('cellValueChanged', self._on_cell_clicked)
+                self.myGraph = ui.matplotlib(figsize=(9, 5))
+                self.ax = self.myGraph.figure.gca()
+                self.ax.set_yscale('log')
+                self.ax.set_title("Données issues d'un DataFrame")
+                self.ax.set_xlabel("x")
+                self.ax.set_ylabel("Valeurs")
                 self.a = ui.audio(self.path2 + 'mixkit-air-zoom-vacuum-2608.wav')
                 self.a.visible = False
-            with ui.tab_panel(two):
-                self.fullAssets = ui.aggrid({
-                    'columnDefs': [
-                        {"field": "Name", "filter": 'agTextColumnFilter', 'floatingFilter': False, 'checkboxSelection': True},
-                        {"field": "ISIN", "filter": 'agTextColumnFilter', 'floatingFilter': False},
-                        {"field": "Volatility"},
-                        {"field": "Sum positive"},
-                        {"field": "Sum negative"},
-                        {"field": "File name"},
-                    ],
-                    'rowData': self.fullAssetsList
-                }).classes('max-h-300').style('width: 100%')
-                tabs.set_value(('Simulation'))
+
+        self.fullAssets = ui.aggrid({
+            'columnDefs': [
+                {"field": "Name", "filter": 'agTextColumnFilter', 'floatingFilter': False, 'checkboxSelection': True},
+                {"field": "ISIN", "filter": 'agTextColumnFilter', 'floatingFilter': False},
+                {"field": "Volatility"},
+                {"field": "Sum positive"},
+                {"field": "Sum negative"},
+                {"field": "File name"},
+            ],
+            'rowData': self.fullAssetsList
+        }).classes('max-h-300').style('width: 100%')
         if os.path.exists(self.workingPath + "results.pkl"):
-            a=1
             self.RefreshRowData()
         #self.GetAllAssetsList()
 
-    def EventsTable(self):
-        columns = [
-            {'name': 'origin', 'label': 'Origin', 'field': 'origin', 'required': True, 'align': 'left', 'sortable': True},
-            {'name': 'event', 'label': 'Event', 'field': 'event', 'sortable': True},
-        ]
-        rows = [
-            {'origin': 'Alice', 'event': 18},
-            {'origin': 'Bob', 'event': 21},
-            {'origin': 'Carol', 'event': 10},
-        ]
-        self.eventsTable = ui.table(columns=columns, rows=rows, row_key='name')
+
+    def color_for_usage(self, usage):
+        if usage < 50:
+            return '#4caf50'  # Vert
+        elif usage < 80:
+            return '#ff9800'  # Orange
+        else:
+            return '#f44336'  # Rouge
+
+    def ProcessGraph(self):
+        return ui.echart({
+            'xAxis': {'type': 'category', 'data': [f'Cœur {i}' for i in range(psutil.cpu_count())]},
+            'yAxis': {'type': 'value', 'max': 100},
+            'series': [{
+                'type': 'bar',
+                'data': [0] * psutil.cpu_count(),
+                'itemStyle': {
+                    'color': '#4caf50'
+                }
+            }]
+        }).classes('W: full H: full').style('background-color: #121212; color: white;')
 
     def taille_lisible(self, octets):
         for unite in ['B', 'Ko', 'Mo', 'Go', 'To']:
@@ -154,7 +173,6 @@ class Gui():
         for isin in row[0]:
             self.assetsName.append({"Asset name": pu.ReturnAssetDescription([isin])[0], "ISIN": isin, "Weight": row[1][i]})
             i += 1
-        self.finalPortfolio.update()
         self.displayGraph(row[6])
 
     def RefreshRowData(self):
@@ -167,7 +185,8 @@ class Gui():
                      "lowest volatility": round(p[7] * 100, 2),
                      "sharpe lowest vol": round(p[9], 2), "timestamp": p[11].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]})
             except Exception as a:
-                print("RefreshRowData", a)
+                self.ShowLog.value = True
+                self.log.push(f"[RefreshData] {a}")
         self.aggrid.update()
 
     def GetAllAssetsList(self):
@@ -178,7 +197,7 @@ class Gui():
         self.fullAssets.update()
 
     def ChangeValue(self, event):
-        if event.sender.text == "Kelly optimization":
+        if event.sender.text == "Kelly":
             colManager = PortfolioUtilities.ColumnManager(self.finalPortfolio.props['options']['columnDefs'])
             if event.value:
                 if not colManager.has('Kelly weight'):
@@ -186,7 +205,6 @@ class Gui():
             else:
                 if colManager.has(('Kelly weight')):
                     self.finalPortfolio.props['options']['columnDefs'] = colManager.remove_all("Kelly weight")
-
 
     def update_number_of_assets(self, nbAssets, fileName):
         """
@@ -235,9 +253,10 @@ class Gui():
         self.displayGraph( bestPortfolio[6][bestPortfolio[0]])
 
     def Simulate(self, nbOfSimulation, nbOfWeight):
+
         showDensity = False
         isRandom = True
-
+        self.log.clear()
         portfolio = Portfolio.ModernPortfolioTheory(nbOfSimulation, 2, 4, self.parallel)
         portfolio.nbOfSimulatedWeights = nbOfWeight
         data, isin = portfolio.BuilHeterogeneousPortfolio(self.portfolioStructure)
@@ -253,12 +272,13 @@ class Gui():
             bestPortfolios.append([])
         return bestPortfolios
 
-    def Callback(self):
+    async def Callback(self):
         try:
+            self.ShowLog.value = True
             bestPortfolio = []
             self.btnSimulate.disable()
             self.spinner.visible = True
-            bestPortfolio = self.Simulate(int(self.nbOfSimulation.value), int(self.nbOfWeight.value))
+            bestPortfolio = await run.io_bound(self.Simulate,int(self.nbOfSimulation.value), int(self.nbOfWeight.value))
             if len(bestPortfolio) == 0:
                 with self.fullAssets:
                     ui.notify("No Assets Class Selected")
@@ -267,6 +287,7 @@ class Gui():
                 return
         except Exception as e:
             print("💥 ERREUR pendant la simulation :", e)
+            self.log.push(e)
             traceback.print_exc()
         finally:
             #self.results = pd.read_pickle(self.workingPath + "results.pkl")
@@ -281,23 +302,56 @@ class Gui():
             self.spinner.visible = False
             if self.Sound.value:
                 self.a.play()
+            self.ShowLog.value = False
         return bestPortfolio
 
     def handle_theme_change(self, e: events.ValueChangeEventArguments):
         self.aggrid.classes(add='ag-theme-balham-dark' if e.value else 'ag-theme-balham',
                      remove='ag-theme-balham ag-theme-balham-dark')
 
+def update_memory(app):
+    process = psutil.Process()
+    while True:
+        mem = psutil.virtual_memory()
+        proc_mem = process.memory_info()
+        app.label_total.text = f"Tot: {mem.total / (1024**3):.2f} Go"
+        app.label_available.text = f"Available: {mem.available / (1024**3):.2f} Go"
+        app.label_used.text = f"Used: {mem.used / (1024**3):.2f} Go"
+        app.label_percent.text = f"RAM: {mem.percent}%"
+        app.label_process.text = f"Script: {proc_mem.rss / (1024**2):.2f} Mo"
+        app.queue_size.text = "Queue size: " + str(app.parallel.queueMessages.qsize())
+        time.sleep(0.2)
+
 def update_ui(obj, event, queue):
+    p = psutil.Process(os.getpid())
+    # Sur macOS, tu peux définir la "nice value"
     while True:
         event.wait()
-        print("on recoit quelque chose")
         try:
-            message = queue.get_nowait()
-            obj.notify(message)
+            while not queue.empty():
+                message = queue.get_nowait()
+                time.sleep(0.05)
+                try:
+                    with obj:
+                        obj.push(message)
+                except:
+                    obj.push(f"[Listener]{a}")
         except:
-            obj.notify("[Main] Signal received, but queue is empty")
+            time.sleep(0.1)
         event.clear()
-        time.sleep(1)
+
+def update_chart(app):
+    while True:
+        usage = psutil.cpu_percent(percpu=True)
+        app.process_graph.options['series'][0]['data'] = [
+            {
+                'value': u,
+                'itemStyle': {'color': app.color_for_usage(u)}
+            }
+            for u in usage
+        ]
+        app.process_graph.update()
+        time.sleep(0.2)
 
 
 @ui.page('/')
@@ -306,7 +360,8 @@ async def main_page():
     multiprocessing.set_start_method('spawn', force=True)
     parallel = ParallelComputing.Parallel()
     app_gui = Gui(parallel)
-    splitter = app_gui.splitter
-    threading.Thread(target=update_ui, args=(splitter, parallel.event, parallel.queueMessages), daemon=True).start()
+    threading.Thread(target=update_ui, args=(app_gui.log, parallel.event, parallel.queueMessages), daemon=True).start()
+    threading.Thread(target=update_memory, args=(app_gui,), daemon=True).start()
+    threading.Thread(target=update_chart, args=(app_gui,), daemon=True).start()
 
 ui.run()
