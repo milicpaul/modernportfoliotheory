@@ -51,7 +51,7 @@ class ModernPortfolioTheory():
         try:
             mean_returns = returns.mean() * 252  # Rendement moyen annuel
             cov_matrix = returns.cov() * 252  # Matrice de covariance annuelle
-            while i < 50000:
+            while i < 10000:
                 if not optimization:
                     weightsList.append(ModernPortfolioTheory.generate_weights(len(returns.columns)))
                 else:
@@ -70,9 +70,8 @@ class ModernPortfolioTheory():
                 i += 1
                 if i%500 == 0:
                     while not queueMessages.empty():
-                        print("on vide la queue")
                         event.set()
-                        time.sleep(0.5)
+                        time.sleep(0.1)
         except Exception as a:
             pass
         return weightsList[index], highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLowerVolatility, sharpeLowerVolatility
@@ -138,9 +137,6 @@ class ModernPortfolioTheory():
             bestPortfolios.append([portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
                 originalData, lowerVolatility, returnsLower, sharpeLower])
         queueMessages.put_nowait(f"[Portfolio]Ending Simulation, Process id {os.getpid()}")
-        while not queueMessages.empty():
-            print("on vide la queue")
-            event.set()
         queueResults.put(bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])])
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):

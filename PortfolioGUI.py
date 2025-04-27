@@ -10,7 +10,7 @@ import traceback
 import os
 from pathlib import Path
 import KellyPortfolio
-from multiprocessing import Process, Event, Queue, set_start_method
+import subprocess
 import threading
 import time
 import multiprocessing
@@ -51,7 +51,7 @@ class Gui():
                     self.label_percent = ui.label(f"RAM: {mem.percent}%")
                     self.label_process = ui.label()
                     self.queue_size = ui.label()
-
+                    self.temperature = ui.label()
             with splitterTop.after:
                 with ui.row():
                     with ui.card().style('width: 500px; height: 120px;'):  # <<<<<< ICI, tu ajustes la taille
@@ -320,6 +320,8 @@ def update_memory(app):
         app.label_percent.text = f"RAM: {mem.percent}%"
         app.label_process.text = f"Script: {proc_mem.rss / (1024**2):.2f} Mo"
         app.queue_size.text = "Queue size: " + str(app.parallel.queueMessages.qsize())
+        ret = subprocess.run(['/opt/homebrew/Cellar/osx-cpu-temp/1.1.0/bin/osx-cpu-temp'], capture_output=True, text=True)
+        app.temperature.text = ret.stdout.strip()
         time.sleep(0.2)
 
 def update_ui(obj, event, queue):
@@ -334,7 +336,7 @@ def update_ui(obj, event, queue):
                 try:
                     with obj:
                         obj.push(message)
-                except:
+                except Exception as a:
                     obj.push(f"[Listener]{a}")
         except:
             time.sleep(0.1)
@@ -363,5 +365,6 @@ async def main_page():
     threading.Thread(target=update_ui, args=(app_gui.log, parallel.event, parallel.queueMessages), daemon=True).start()
     threading.Thread(target=update_memory, args=(app_gui,), daemon=True).start()
     threading.Thread(target=update_chart, args=(app_gui,), daemon=True).start()
+    threading.Thread(target=app_gui.GetAllAssetsList, daemon=True).start()
 
 ui.run()
