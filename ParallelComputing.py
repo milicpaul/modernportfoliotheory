@@ -14,11 +14,13 @@ class Parallel:
 
 
     def run_select_random_assets_parallel(self, portfolio, data, isin, nbOfSimulation,
-                                          percentage, showDensity, isRandom, localPortfolio=[]):
+                                          percentage, showDensity, isRandom, dateFrom, dateTo, localPortfolio=None):
+        if localPortfolio is None:
+            localPortfolio = []
         cpu_count = multiprocessing.cpu_count()
         """Exécute la simulation dans plusieurs processus."""
         workers = [Process(target=portfolio.SelectRandomAssets, args=(data, isin, nbOfSimulation,
-                           percentage, self.queueResults, self.queueMessages, self.event, showDensity, isRandom, [])) for i in range(multiprocessing.cpu_count() - 1)]
+                           percentage, self.queueResults, self.queueMessages, self.event, showDensity, isRandom, dateFrom, dateTo)) for i in range(multiprocessing.cpu_count() - 1)]
         i = 0
         for w in workers:
             self.queueMessages.put(f"[Parallel Computing]Starting Process {os.getpid()}")

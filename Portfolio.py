@@ -1,5 +1,4 @@
 import time
-
 import numpy as np
 import pandas as pd
 import random
@@ -110,7 +109,12 @@ class ModernPortfolioTheory():
         return np.round(vecteur, 2)
 
     @staticmethod
-    def SelectRandomAssets(data, isin, nbOfSimulation, percentage, queueResults, queueMessages, event, showDensity=False, random=True, localPortfolio=[]):
+    def SelectRandomAssets(data, isin, nbOfSimulation, percentage, queueResults,
+                           queueMessages, event, showDensity=False, random=True,
+                           dateFrom = pd.to_datetime('2022-06-15'), dateTo = pd.to_datetime('2025-04-15'),
+                           localPortfolio=None):
+        if localPortfolio is None:
+            localPortfolio = []
         portfolioU = pu.PortfolioUtilities()
         timeSeries = data
         data = data.pct_change(fill_method=None)
@@ -127,8 +131,8 @@ class ModernPortfolioTheory():
                     portfolio = localPortfolio
                 portfolioLength = len(portfolio)
                 currentData = data[portfolio]
-                currentData = currentData[(currentData.index >= pd.to_datetime('2022-06-15')) & (
-                                           currentData.index <= pd.to_datetime('2025-04-15'))]
+                currentData = currentData[(currentData.index >= dateFrom) & (
+                                           currentData.index <= dateTo)]
                 originalData = timeSeries[portfolio]
                 enoughData = currentData.shape[1] == portfolioLength
             weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages)

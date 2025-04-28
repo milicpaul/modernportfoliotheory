@@ -14,6 +14,8 @@ import subprocess
 import threading
 import time
 import multiprocessing
+import NiceGUIElement
+
 
 class Gui():
     def __init__(self, parallel: ParallelComputing):
@@ -34,30 +36,37 @@ class Gui():
             self.results = pd.read_pickle(self.workingPath + "results.pkl")
 
         self.columnDefs = [{'field': 'File name'}, {"field": "Selection", 'editable': True}, {'field': 'Number of assets'}, {'field': 'Size'}]
-        with ui.splitter(value=60).style('width: 100%') as splitterTop:
+        with ui.splitter(value=70).style('width: 100%') as splitterTop:
             with splitterTop.before:
                 with ui.row():
-                    self.nbOfSimulation = ui.input(label='Portfolios simulation:', value='5')
-                    self.nbOfWeight = ui.input(label='Weights by simulation:', value='10000')
-                    self.kelly = ui.switch('Kelly ', on_change=self.ChangeValue)
-                    self.Robust = ui.switch('Robust', on_change=self.ChangeValue)
-                    self.Sound = ui.switch("Sound", on_change=self.ChangeValue)
-                    self.ShowLog = ui.switch("Show log")
-                with ui.row():
-                    mem = psutil.virtual_memory()
-                    self.label_total = ui.label(f"Tot: {mem.total / (1024 ** 3):.2f} Go")
-                    self.label_available = ui.label(f"Avalaible: {mem.available / (1024 ** 3):.2f} Go")
-                    self.label_used = ui.label(f"Used: {mem.used / (1024 ** 3):.2f} Go")
-                    self.label_percent = ui.label(f"RAM: {mem.percent}%")
-                    self.label_process = ui.label()
-                    self.queue_size = ui.label()
-                    self.temperature = ui.label()
+                    with ui.card():
+                        with ui.row():
+                            self.nbOfSimulation = ui.input(label='Portfolios simulation:', value='5')
+                            self.nbOfWeight = ui.input(label='Weights by simulation:', value='10000')
+                            self.kelly = ui.switch('Kelly ', on_change=self.ChangeValue)
+                            self.Robust = ui.switch('Robust', on_change=self.ChangeValue)
+                            self.Sound = ui.switch("Sound", on_change=self.ChangeValue)
+                            self.ShowLog = ui.switch("Show log")
+                        with ui.row():
+                            mem = psutil.virtual_memory()
+                            self.label_total = ui.label(f"Tot: {mem.total / (1024 ** 3):.2f} Go")
+                            self.label_available = ui.label(f"Avalaible: {mem.available / (1024 ** 3):.2f} Go")
+                            self.label_used = ui.label(f"Used: {mem.used / (1024 ** 3):.2f} Go")
+                            self.label_percent = ui.label(f"RAM: {mem.percent}%")
+                            self.label_process = ui.label()
+                            self.queue_size = ui.label()
+                            self.temperature = ui.label()
+                    with ui.card():
+                        with ui.column():
+                            self.DateFrom = NiceGUIElement.NiceGUIElement.DatePicker('Date From', '2018-01-01')
+                            self.DateTo = NiceGUIElement.NiceGUIElement.DatePicker('Date To', '2022-12-31')
+
             with splitterTop.after:
                 with ui.row():
                     with ui.card().style('width: 500px; height: 120px;'):  # <<<<<< ICI, tu ajustes la taille
                         self.process_graph = self.ProcessGraph()
-        with ui.splitter(horizontal=False, reverse=False, value=45,
-                         on_change=lambda e: ui.notify(e.value)).style('width: 100%') as self.splitter:
+        with (ui.splitter(horizontal=False, reverse=False, value=45,
+                         on_change=lambda e: ui.notify(e.value)).style('width: 100%') as self.splitter):
             with self.splitter.before:
                 files = [f for f in os.listdir(self.path) if f.endswith('.pkl')]
                 files.sort()
@@ -72,7 +81,7 @@ class Gui():
                         {"field": "returns lowest vol"},
                         {"field": "lowest volatility"},
                         {"field": "sharpe lowest vol"},
-                        {"field": "timestamp"}
+                        {"field": "timestamp", "sort": "descending"},
                     ],
                     'rowData': self.rowData
                     }).classes('max-h-50').style('width: 98%').on('cellClicked', lambda event: self.FindPortfolio(event))
@@ -121,7 +130,6 @@ class Gui():
         if os.path.exists(self.workingPath + "results.pkl"):
             self.RefreshRowData()
         #self.GetAllAssetsList()
-
 
     def color_for_usage(self, usage):
         if usage < 50:
@@ -176,7 +184,7 @@ class Gui():
         self.displayGraph(row[6])
 
     def RefreshRowData(self):
-        for index, row in self.results.iterrows():
+        for index, row in self.results.iloc[::-1].iterrows():
             try:
                 p = row.Portfolio
                 self.rowData.append(
@@ -222,25 +230,39 @@ class Gui():
     def _on_cell_clicked(self, event):
         self.portfolioStructure = self.update_number_of_assets(event.args['data']['Selection'], event.args['data']['File name'])
 
-    def displayGraph(self, localDef):
+    def displayGraph(self, localDef, returns):
         self.ax.clear()
         for column in localDef.columns:
             self.ax.plot(localDef.index, localDef[column], label=column)
         self.ax.figure.canvas.draw()
         self.ax.legend()
+        self.ax.text(
+            0.95, 0.05,  # Position dans l'axe (0=bas gauche, 1=haut droite)
+            f'Return {str(round(float(pd.DataFrame(returns).mean()) * 252 * 100,2))}%',
+            transform=self.ax.transAxes,  # Position exprimée en coordonnées relatives à l'axe
+            fontsize=12,
+            verticalalignment='top',
+            horizontalalignment='right',
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.5)
+        )
+
         self.myGraph.update()
         self.finalPortfolio.update()
         self.aggrid.update()
 
+    def CalculateReturn(self, bestPortfolio)->float:
+        data = bestPortfolio[6].pct_change()
+        return data[data.index >  pd.to_datetime(self.DateTo.value)] @ bestPortfolio[1]
 
     def display_portfolio(self, bestPortfolio):
         self.finalPortfolio.clear()
         self.assetsName.clear()
         portfolioUtilities = PortfolioUtilities.PortfolioUtilities()
-        self.rowData.append({"returns": round(bestPortfolio[2] * 100, 2), "volatility": round(bestPortfolio[3] * 100, 2),
+        self.rowData.insert(0, {"returns": round(bestPortfolio[2] * 100, 2), "volatility": round(bestPortfolio[3] * 100, 2),
          "sharpe": round(bestPortfolio[4], 2), "returns lowest vol": round(bestPortfolio[8] * 100, 2),
          "lowest volatility": round(bestPortfolio[7] * 100, 2), "sharpe lowest vol": round(bestPortfolio[9], 2),
          "timestamp": bestPortfolio[-1].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]})
+        self.aggrid.update()
         assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolio[0])
         i = 0
         for a in assetsDescription:
@@ -250,10 +272,9 @@ class Gui():
                 self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
             i += 1
 
-        self.displayGraph( bestPortfolio[6][bestPortfolio[0]])
+        self.displayGraph(bestPortfolio[6][bestPortfolio[0]], self.CalculateReturn(bestPortfolio))
 
     def Simulate(self, nbOfSimulation, nbOfWeight):
-
         showDensity = False
         isRandom = True
         self.log.clear()
@@ -263,7 +284,8 @@ class Gui():
         if len(isin) == 0:
             return []
         bestPortfolios = self.parallel.run_select_random_assets_parallel(portfolio, data, isin, nbOfSimulation,
-                                           self.portfolioStructure, showDensity, isRandom, [])
+                                           self.portfolioStructure, showDensity, isRandom,
+                                           pd.to_datetime(self.DateFrom.value), pd.to_datetime(self.DateTo.value), [])
         if self.kelly.value == True:
             kelly = KellyPortfolio.KellyCriterion()
             kellyResult =  kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns))
@@ -325,7 +347,6 @@ def update_memory(app):
         time.sleep(0.2)
 
 def update_ui(obj, event, queue):
-    p = psutil.Process(os.getpid())
     # Sur macOS, tu peux définir la "nice value"
     while True:
         event.wait()
