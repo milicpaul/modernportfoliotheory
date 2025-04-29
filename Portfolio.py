@@ -7,6 +7,8 @@ import PortfolioUtilities as pu
 import multiprocessing
 import sys
 import ParallelComputing
+import tensorflow as tf
+
 
 class ModernPortfolioTheory():
     weight_list = []
@@ -56,7 +58,16 @@ class ModernPortfolioTheory():
                 else:
                     weightsList.append(ModernPortfolioTheory.MoveInSphere(bestWeights, 0.009 + epsilonIncrease))
                 portfolio_return = np.sum(weightsList[-1] * mean_returns)
-                portfolio_volatility = np.sqrt(np.dot(weightsList[-1].T, np.dot(cov_matrix, weightsList[-1])))
+                #portfolio_volatility = np.sqrt(np.dot(weightsList[-1].T, np.dot(cov_matrix, weightsList[-1])))
+                with tf.device('/GPU:0'):
+                    weights = tf.convert_to_tensor(weightsList[-1], dtype=tf.float32)
+                    weights = tf.reshape(weights, [-1, 1])  # colonne (n,1)
+                    cov = tf.convert_to_tensor(cov_matrix.values, dtype=tf.float32)
+
+                    portfolio_volatility = tf.sqrt(tf.matmul(tf.transpose(weights), tf.matmul(cov, weights)))
+                    portfolio_volatility = portfolio_volatility.numpy().item()  # extrait le scalaire
+
+                    #portfolio_volatility = tf.matmul(weightsList[-1].T, tf.matmul(cov_matrix, weightsList[-1]))
                 if portfolio_volatility < lowerVolatility:
                     lowerVolatility = portfolio_volatility
                     returnsLowerVolatility = portfolio_return
