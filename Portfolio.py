@@ -39,52 +39,70 @@ class ModernPortfolioTheory():
         return np.round(new_w, 3)
 
     @staticmethod
-    def Volatility(returns, optimization, epsilonIncrease, bestWeights, event, queueMessages):
+    def Volatility(returns, optimization, epsilonIncrease, bestWeights, event, queueMessages, nbOfSimulation):
         highestReturn = 0
         highestVolatility = 0
         highestSharpe = 0
-        lowerVolatility = sys.maxsize
+        lowerVolatility = float('inf')
         returnsLowerVolatility = 0
         sharpeLowerVolatility = 0
         index = 0
         i = 0
         weightsList = []
+
         try:
             mean_returns = returns.mean() * 252  # Rendement moyen annuel
             cov_matrix = returns.cov() * 252  # Matrice de covariance annuelle
-            while i < 10000:
+            cov = tf.convert_to_tensor(cov_matrix.values, dtype=tf.float32)
+
+            while i <= nbOfSimulation:
                 if not optimization:
-                    weightsList.append(ModernPortfolioTheory.generate_weights(len(returns.columns)))
+                    weights_np = ModernPortfolioTheory.generate_weights(len(returns.columns))
                 else:
-                    weightsList.append(ModernPortfolioTheory.MoveInSphere(bestWeights, 0.009 + epsilonIncrease))
-                portfolio_return = np.sum(weightsList[-1] * mean_returns)
-                #portfolio_volatility = np.sqrt(np.dot(weightsList[-1].T, np.dot(cov_matrix, weightsList[-1])))
+                    weights_np = ModernPortfolioTheory.MoveInSphere(bestWeights, 0.009 + epsilonIncrease)
+
+                weightsList.append(weights_np)
+                weights_tf = tf.convert_to_tensor(weights_np, dtype=tf.float32)
+                weights_tf = tf.reshape(weights_tf, [-1, 1])  # Colonne
+
                 with tf.device('/GPU:0'):
-                    weights = tf.convert_to_tensor(weightsList[-1], dtype=tf.float32)
-                    weights = tf.reshape(weights, [-1, 1])  # colonne (n,1)
-                    cov = tf.convert_to_tensor(cov_matrix.values, dtype=tf.float32)
+                    # Calcul du rendement
+                    portfolio_return = np.sum(weights_np * mean_returns)
+                    # Calcul de la volatilité avec TensorFlow
+                    volatility_tf = tf.sqrt(tf.matmul(tf.transpose(weights_tf), tf.matmul(cov, weights_tf)))
+                    portfolio_volatility = volatility_tf.numpy().item()  # Scalaire Python
 
-                    portfolio_volatility = tf.sqrt(tf.matmul(tf.transpose(weights), tf.matmul(cov, weights)))
-                    portfolio_volatility = portfolio_volatility.numpy().item()  # extrait le scalaire
-
-                    #portfolio_volatility = tf.matmul(weightsList[-1].T, tf.matmul(cov_matrix, weightsList[-1]))
                 if portfolio_volatility < lowerVolatility:
                     lowerVolatility = portfolio_volatility
                     returnsLowerVolatility = portfolio_return
-                    sharpeLowerVolatility = round(portfolio_return/portfolio_volatility, 2)
-                if portfolio_volatility > 0 and (portfolio_return / portfolio_volatility > highestSharpe):
-                    highestSharpe = portfolio_return / portfolio_volatility
-                    highestReturn = portfolio_return
-                    highestVolatility = portfolio_volatility
-                    index = i
+                    sharpeLowerVolatility = round(portfolio_return / portfolio_volatility, 2)
+
+                if portfolio_volatility > 0:
+                    sharpe = portfolio_return / portfolio_volatility
+                    if sharpe > highestSharpe:
+                        highestSharpe = sharpe
+                        highestReturn = portfolio_return
+                        highestVolatility = portfolio_volatility
+                        index = i
+
                 i += 1
-                if i%500 == 0:
+                if i % 10000 == 0:
                     while not queueMessages.empty():
                         event.set()
-                        time.sleep(0.1)
-        except Exception as a:
-            pass
-        return weightsList[index], highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLowerVolatility, sharpeLowerVolatility
+                        time.sleep(0.03)
+
+        except Exception as e:
+            print(f"[Volatility] Erreur : {e}")
+
+        return (
+            weightsList[index],
+            highestReturn,
+            highestVolatility,
+            highestSharpe,
+            lowerVolatility,
+            returnsLowerVolatility,
+            sharpeLowerVolatility
+        )
 
     def FindInSphere(self, data, weight, nbOfSimulation):
         r = []
@@ -131,7 +149,9 @@ class ModernPortfolioTheory():
         data = data.pct_change(fill_method=None)
         bestPortfolios = []
         queueMessages.put_nowait(f"[Portfolio]Starting Simulation, Process id {os.getpid()}")
-        event.set()
+        while not queueMessages.empty():
+            event.set()
+            time.sleep(0.05)
         for j in range(nbOfSimulation):
             queueMessages.put(f"[Portfolio]Running Simulation, Process id {os.getpid()}, simulation {j}")
             enoughData = False
@@ -146,7 +166,7 @@ class ModernPortfolioTheory():
                                            currentData.index <= dateTo)]
                 originalData = timeSeries[portfolio]
                 enoughData = currentData.shape[1] == portfolioLength
-            weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages)
+            weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages, nbOfSimulation)
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
             bestPortfolios.append([portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,

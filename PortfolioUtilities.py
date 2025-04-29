@@ -1,14 +1,13 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
-import assets
 import os
 import seaborn as sns
 import requests
 import numpy as np
 import threading
-import sys
 import random
+from datetime import datetime, timedelta
 import time
 
 class PortfolioUtilities():
@@ -19,6 +18,19 @@ class PortfolioUtilities():
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
         self.df = pd.read_csv(self.path + "Assets Description.csv", sep=",", index_col=False)
+
+    def CheckPklFile(self, filename):
+        df = pd.read_pickle(self.path + filename)
+        pass
+
+    def RefreshPkl(self):
+        files = [f for f in os.listdir(self.path) if f.endswith('.pkl')]
+        for f in files:
+            df = pd.read_pickle(self.path + f)
+            isinDf = yf.download(df.columns.tolist(), start=(df.index[-1] + timedelta(days=1)).date().isoformat(), end=datetime.today(), interval="1d")
+            isinDf = isinDf['Close']
+            fullData = pd.concat([df, isinDf], axis=0)
+            #fullData.to_pickle(self.path + f)
 
     def GetAllAssets(self):
         assets = []
@@ -55,7 +67,6 @@ class PortfolioUtilities():
                 df = pd.read_pickle(self.path + f[0])
                 if i in df.columns.tolist():
                     found[isin.index(i)] = True
-                    print(f)
                     break
         return found
 
@@ -240,28 +251,6 @@ class PortfolioUtilities():
         # Affichage du graphique
         plt.show()
 
-    def DisplayResults(self, instance, bestPortfolio):
-        try:
-            print('')
-            print("Optimal portfolio:", bestPortfolio[0])
-            print("Optima name", ",".join(instance.ReturnAssetDescription(bestPortfolio[0])) )
-            print("Optimal weight:", bestPortfolio[1])
-            print("Optimal return:", round(bestPortfolio[2] * 100,2), " Optimal volatility:", round(bestPortfolio[3] * 100,2), " Optimal sharpe ratio:", round(bestPortfolio[2] / bestPortfolio[3],2))
-            print("Returns lower :", round(bestPortfolio[-2] * 100,2)," Lower volatility  :", round(bestPortfolio[-3] * 100,2)," lower sharpe        :", round(bestPortfolio[-1],2))
-        except Exception as a:
-            bestPortfolio[0] = "N/A"
-        best = " "
-        for b in bestPortfolio[1]:
-            best += str(b) + "-"
-        with open(self.path + "Portfolios results.csv", "a") as myFile:
-            myFile.write(",".join(bestPortfolio[0]) + ';' +
-                         ",".join(instance.ReturnAssetDescription(bestPortfolio[0])) + ";" +
-                         best[:-1] + ";" +
-                         str(round(bestPortfolio[2] * 100, 2)) + ";" +
-                         str(bestPortfolio[3] * 100) + ';' +
-                         str(round(bestPortfolio[2] / bestPortfolio[3], 4)) + "\n"
-                         )
-
     def ReturnDataset(self, portfolio, fullDataset):
         return fullDataset[list(portfolio)[0]]
 
@@ -327,3 +316,7 @@ class ColumnManager:
     def __repr__(self):
         return f"ColumnManager({self.columns})"
 
+if __name__ == '__main__':
+    ut = PortfolioUtilities()
+    ut.CheckPklFile('FTSE Mib.pkl')
+    ut.RefreshPkl()

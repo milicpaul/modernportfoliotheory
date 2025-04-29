@@ -1,4 +1,5 @@
 from nicegui import ui
+import psutil
 
 class NiceGUIElement:
     def __init__(self):
@@ -15,4 +16,32 @@ class NiceGUIElement:
                 ui.icon('edit_calendar').on('click', menu.open).classes('cursor-pointer')
         date.value = val
         return date
+
+    @staticmethod
+    def FirstSplitterBefore(gui) -> ui.row:
+        with ui.row() as firstRow:
+            with ui.card():
+                with ui.row():
+                    gui.nbOfSimulation = ui.input(label='Portfolios simulation:', value='5')
+                    gui.nbOfWeight = ui.input(label='Weights by simulation:', value='10000')
+                    gui.kelly = ui.switch('Kelly', on_change=gui.ChangeValue)
+                    gui.Robust = ui.switch('Robust', on_change=gui.ChangeValue)
+                    gui.Sound = ui.switch("Sound", on_change=gui.ChangeValue)
+                    gui.ShowLog = ui.switch("Show log")
+                with ui.row():
+                    mem = psutil.virtual_memory()
+                    gui.label_total = ui.label(f"Tot: {mem.total / (1024 ** 3):.2f} Go")
+                    gui.label_available = ui.label(f"Avalaible: {mem.available / (1024 ** 3):.2f} Go")
+                    gui.label_used = ui.label(f"Used: {mem.used / (1024 ** 3):.2f} Go")
+                    gui.label_percent = ui.label(f"RAM: {mem.percent}%")
+                    gui.label_process = ui.label()
+                    gui.queue_size = ui.label()
+                    gui.temperature = ui.label()
+            with ui.card():
+                with ui.column():
+                    gui.DateFrom = NiceGUIElement.DatePicker('Date From', '2018-01-01')
+                    gui.DateTo = NiceGUIElement.DatePicker('Date To', '2022-12-31')
+        return firstRow
+
+
 

@@ -17,13 +17,10 @@ class Parallel:
                                           percentage, showDensity, isRandom, dateFrom, dateTo, localPortfolio=None):
         if localPortfolio is None:
             localPortfolio = []
-        cpu_count = multiprocessing.cpu_count()
         """Exécute la simulation dans plusieurs processus."""
         workers = [Process(target=portfolio.SelectRandomAssets, args=(data, isin, nbOfSimulation,
-                           percentage, self.queueResults, self.queueMessages, self.event, showDensity, isRandom, dateFrom, dateTo)) for i in range(multiprocessing.cpu_count() - 1)]
-        i = 0
+                           percentage, self.queueResults, self.queueMessages, self.event, showDensity, isRandom, dateFrom, dateTo)) for i in range(multiprocessing.cpu_count() - 2)]
         for w in workers:
-            self.queueMessages.put(f"[Parallel Computing]Starting Process {os.getpid()}")
             w.start()
         for w in workers:
             w.join()
@@ -32,7 +29,7 @@ class Parallel:
             try:
                 results.append(self.queueResults.get())
             except:
-                a=1
+                pass
         # Calcul du meilleur portefeuille
         best_portfolio = results[np.argmax([r[4] for r in results])]
         return best_portfolio
