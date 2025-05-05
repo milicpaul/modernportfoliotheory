@@ -11,6 +11,38 @@ class Statistics():
         else:
             self.path = "C:/Users/paul.milic/Modern Portfolio/"
 
+    import numpy as np
+    @staticmethod
+    def rendre_definie_positive(matrice, epsilon=1e-4):
+        n = matrice.shape[0]
+        return matrice + epsilon * np.eye(n)
+
+    def assurer_definie_positive(matrice, epsilon=1e-6):
+        """
+        Vérifie si une matrice est définie positive, sinon la corrige.
+        - Utilise Cholesky pour tester la positivité définie.
+        - Corrige par ajout d’un petit multiple de l'identité si nécessaire.
+        """
+        try:
+            # Test de Cholesky : réussit si la matrice est définie positive
+            np.linalg.cholesky(matrice)
+            return matrice  # ✅ Rien à faire, tout va bien
+        except np.linalg.LinAlgError:
+            # 🔧 Pas définie positive : on ajoute epsilon * I
+            print("[Info] Matrice corrigée (pas définie positive)")
+            n = matrice.shape[0]
+            # On peut itérer jusqu'à ce que Cholesky réussisse
+            factor = 1
+            while True:
+                try:
+                    matrice_corrigée = matrice + epsilon * factor * np.eye(n)
+                    np.linalg.cholesky(matrice_corrigée)
+                    return matrice_corrigée
+                except np.linalg.LinAlgError:
+                    factor *= 10
+                    if factor > 1e6:
+                        raise RuntimeError("Impossible de rendre la matrice définie positive")
+
     def PositiveVariance(self, fileName):
         df = pd.read_pickle(self.path + fileName)
         df = df.pct_change(fill_method=None)

@@ -1,4 +1,6 @@
-from tkinter import Event
+from multiprocessing import Event
+from typing import Optional, Any
+
 import psutil
 import pandas as pd
 from datetime import datetime
@@ -17,9 +19,12 @@ import multiprocessing
 import NiceGUIElement
 
 class Gui(NiceGUIElement.NiceGUIElement):
+    eventReset = Event()
+
     def __init__(self, parallel: ParallelComputing):
         super().__init__()
         self.parallel = parallel
+        self.numberOfMessages = 0
         if os.name != "Windows" and os.name != 'nt':
             self.path = Path("/Users/paul/Documents/Modern Portfolio Theory Data/")
             self.workingPath = "/Users/paul/Documents/Modern Portfolio Theory Data/Data/"
@@ -39,6 +44,8 @@ class Gui(NiceGUIElement.NiceGUIElement):
         with ui.splitter(value=70).style('width: 100%') as splitterTop:
             with splitterTop.before:
                 self.firstRow = NiceGUIElement.NiceGUIElement.FirstSplitterBefore(self)
+                self.progressBar = ui.linear_progress()
+                self.progressBar.value = 0.0
             with splitterTop.after:
                 with ui.row():
                     with ui.card().style('width: 500px; height: 120px;'):  # <<<<<< ICI, tu ajustes la taille
@@ -64,8 +71,6 @@ class Gui(NiceGUIElement.NiceGUIElement):
                         ],
                         'rowData': self.rowData
                         }).classes('max-h-50').style('width: 98%').on('cellClicked', lambda event: self.FindPortfolio(event))
-                    self.spinner = ui.spinner(size='lg', color='primary').classes("items-centered")
-                    self.spinner.visible = False  # Caché tant que pas en traitement
                     self.finalPortfolio = ui.aggrid({
                         'columnDefs': [
                             {"field": "Asset name"},
@@ -86,7 +91,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
                     'rowData':
                         self.fileData
                 }).classes('max-h-80')
-                self.log = ui.log(max_lines=10000).classes('w-full h-30').bind_visibility_from(self.ShowLog, 'value')
+                self.log = ui.log(max_lines=100000).classes('w-full h-30').bind_visibility_from(self.ShowLog, 'value')
                 self.aggrid2.on('cellValueChanged', self._on_cell_clicked)
                 self.myGraph = ui.matplotlib(figsize=(9, 5))
                 self.ax = self.myGraph.figure.gca()
@@ -143,8 +148,10 @@ class Gui(NiceGUIElement.NiceGUIElement):
     def chercher_rec(self, obj, cible):
         if isinstance(obj, list):
             for el in obj:
-                if self.chercher_rec(el, cible):
+                result = self.chercher_rec(el, cible)
+                if result:
                     return True
+            return False  # Important : si rien trouvé dans la liste
         else:
             if isinstance(obj, datetime):
                 return obj.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] == cible
@@ -154,7 +161,11 @@ class Gui(NiceGUIElement.NiceGUIElement):
     def FindPortfolio(self, event):
         pu = PortfolioUtilities.PortfolioUtilities()
         self.assetsName.clear()
-        mainRow = self.results[self.results["Portfolio"].apply(lambda x: self.chercher_rec(x, event.args['data']['timestamp']))]
+        try:
+            mainRow = self.results[self.results["Portfolio"].apply(lambda x: self.chercher_rec(x, event.args['data']['timestamp']))]
+        except Exception as e:
+            print(e)
+            return
         row = list(mainRow.Portfolio)[0]
         mainRow = list(mainRow.Portfolio)
         i = 0
@@ -218,7 +229,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
         self.ax.legend()
         self.ax.text(
             0.95, 0.05,  # Position dans l'axe (0=bas gauche, 1=haut droite)
-            f'Return {str(round(float(pd.DataFrame(returns).mean()) * 252 * 100,2))}%',
+            f'Return {returns}',
             transform=self.ax.transAxes,  # Position exprimée en coordonnées relatives à l'axe
             fontsize=12,
             verticalalignment='top',
@@ -230,9 +241,14 @@ class Gui(NiceGUIElement.NiceGUIElement):
         self.finalPortfolio.update()
         self.aggrid.update()
 
-    def CalculateReturn(self, bestPortfolio)->float:
+    def CalculateReturn(self, bestPortfolio)-> str:
         data = bestPortfolio[6].pct_change(fill_method=None)
-        return data[data.index >  pd.to_datetime(self.DateTo.value)] @ bestPortfolio[1]
+        markovitz = round((data[data.index >  pd.to_datetime(self.DateTo.value)] @ bestPortfolio[1]).sum() * 100, 2)
+        if self.kelly.value:
+            kelly = round((data[data.index > pd.to_datetime(self.DateTo.value)] @ bestPortfolio[-2]).sum() * 100, 2)
+            return f"Markovitz: {markovitz}% kelly : {kelly}%"
+        else:
+            return f"Markovitz: {markovitz}%"
 
     def display_portfolio(self, bestPortfolio):
         self.finalPortfolio.clear()
@@ -246,7 +262,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
         assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolio[0])
         i = 0
         for a in assetsDescription:
-            if self.kelly.value == True:
+            if self.kelly.value:
                 self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-2][i]})
             else:
                 self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
@@ -255,6 +271,8 @@ class Gui(NiceGUIElement.NiceGUIElement):
         self.displayGraph(bestPortfolio[6][bestPortfolio[0]], self.CalculateReturn(bestPortfolio))
 
     def Simulate(self, nbOfSimulation, nbOfWeight):
+        self.numberOfMessages = int(self.nbOfSimulation.value) * 12 + 6
+        self.progressBar.visible = True
         showDensity = False
         isRandom = True
         self.log.clear()
@@ -266,33 +284,34 @@ class Gui(NiceGUIElement.NiceGUIElement):
         bestPortfolios = self.parallel.run_select_random_assets_parallel(portfolio, data, isin, nbOfSimulation,
                                            self.portfolioStructure, showDensity, isRandom,
                                            pd.to_datetime(self.DateFrom.value), pd.to_datetime(self.DateTo.value), [])
-        if self.kelly.value == True:
+        if self.kelly.value:
             kelly = KellyPortfolio.KellyCriterion()
-            kellyResult =  kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns))
-            bestPortfolios.append(list(kellyResult))
+            bestPortfolios.append(list(kelly.SolveKellyCriterion(bestPortfolios[5], len(bestPortfolios[5].columns))))
         else:
             bestPortfolios.append([])
+        time.sleep(1)
+        self.progressBar.visible = False
+        self.progressBar.value = 0
+        self.numberOfMessages = 0
+        self.eventReset.set()
         return bestPortfolios
 
     async def Callback(self):
+        bestPortfolio = []
         try:
             self.ShowLog.value = True
-            bestPortfolio = []
             self.btnSimulate.disable()
-            self.spinner.visible = True
             bestPortfolio = await run.io_bound(self.Simulate,int(self.nbOfSimulation.value), int(self.nbOfWeight.value))
             if len(bestPortfolio) == 0:
                 with self.fullAssets:
                     ui.notify("No Assets Class Selected")
                     self.btnSimulate.enable()
-                    self.spinner.visible = False
                 return
         except Exception as e:
             print("💥 ERREUR pendant la simulation :", e)
             self.log.push(e)
             traceback.print_exc()
         finally:
-            #self.results = pd.read_pickle(self.workingPath + "results.pkl")
             bestPortfolio.append(datetime.now())
             if not os.path.exists(self.workingPath + "results.pkl"):
                 self.results = pd.DataFrame(columns=["Portfolios"], dtype=object)
@@ -301,15 +320,14 @@ class Gui(NiceGUIElement.NiceGUIElement):
                 self.results.to_pickle(self.workingPath + "results.pkl")
                 self.display_portfolio(bestPortfolio)
             self.btnSimulate.enable()
-            self.spinner.visible = False
             if self.Sound.value:
                 self.a.play()
             self.ShowLog.value = False
         return bestPortfolio
 
     def handle_theme_change(self, e: events.ValueChangeEventArguments):
-        self.aggrid.classes(add='ag-theme-balham-dark' if e.value else 'ag-theme-balham',
-                     remove='ag-theme-balham ag-theme-balham-dark')
+        self.aggrid.classes(add='ag-theme-balham-dark' if e.value else 'ag-theme-quartz',
+                     remove='ag-theme-quartz ag-theme-balham-dark')
 
 def update_memory(app):
     process = psutil.Process()
@@ -326,18 +344,26 @@ def update_memory(app):
         app.temperature.text = ret.stdout.strip()
         time.sleep(0.2)
 
-def update_ui(obj, event, queue)->None:
+def update_ui(app, obj, event, queue)->None:
+    i = 0
     while True:
         event.wait()
         try:
+            if app.eventReset.is_set():
+                i = 0
+                app.eventReset.clear()
             while not queue.empty():
                 message = queue.get_nowait()
                 time.sleep(0.05)
                 try:
                     with obj:
                         obj.push(message)
+                        if i%1000 == 0:
+                            obj.clear()
                 except Exception as a:
                     obj.push(f"[Listener]{a}")
+                i += 1
+                app.progressBar.value = f"{round(i / app.numberOfMessages * 100)}%"
         except:
             time.sleep(0.1)
         event.clear()
@@ -361,7 +387,7 @@ async def main_page():
     multiprocessing.set_start_method('spawn', force=True)
     parallel = ParallelComputing.Parallel()
     app_gui = Gui(parallel)
-    threading.Thread(target=update_ui, args=(app_gui.log, parallel.event, parallel.queueMessages), daemon=True).start()
+    threading.Thread(target=update_ui, args=(app_gui, app_gui.log, parallel.event, parallel.queueMessages), daemon=True).start()
     threading.Thread(target=update_memory, args=(app_gui,), daemon=True).start()
     threading.Thread(target=update_chart, args=(app_gui,), daemon=True).start()
     #threading.Thread(target=app_gui.GetAllAssetsList, daemon=True).start()

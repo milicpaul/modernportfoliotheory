@@ -22,9 +22,9 @@ class NiceGUIElement:
         with ui.row() as firstRow:
             with ui.card():
                 with ui.row():
-                    gui.nbOfSimulation = ui.input(label='Portfolios simulation:', value='5')
-                    gui.nbOfWeight = ui.input(label='Weights by simulation:', value='10000')
-                    gui.kelly = ui.switch('Kelly', on_change=gui.ChangeValue)
+                    gui.nbOfSimulation = ui.input(label='Portfolios simulation:', value='10')
+                    gui.nbOfWeight = ui.input(label='Weights by simulation:', value='100000')
+                    gui.kelly = ui.switch('Kelly', on_change=gui.ChangeValue, value=True)
                     gui.Robust = ui.switch('Robust', on_change=gui.ChangeValue)
                     gui.Sound = ui.switch("Sound", on_change=gui.ChangeValue)
                     gui.ShowLog = ui.switch("Show log")

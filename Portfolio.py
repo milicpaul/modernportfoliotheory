@@ -5,9 +5,9 @@ import random
 import os
 import PortfolioUtilities as pu
 import multiprocessing
-import sys
 import ParallelComputing
 import tensorflow as tf
+import Statistics
 
 
 class ModernPortfolioTheory():
@@ -40,19 +40,19 @@ class ModernPortfolioTheory():
 
     @staticmethod
     def Volatility(returns, optimization, epsilonIncrease, bestWeights, event, queueMessages, nbOfSimulation):
+        returns = returns.dropna(thresh=int(returns.shape[0] * 0.8), axis=1)
         highestReturn = 0
         highestVolatility = 0
         highestSharpe = 0
         lowerVolatility = float('inf')
         returnsLowerVolatility = 0
         sharpeLowerVolatility = 0
-        index = 0
         i = 0
-        weightsList = []
+        bestWeights = np.zeros(len(returns.columns))
 
         try:
             mean_returns = returns.mean() * 252  # Rendement moyen annuel
-            cov_matrix = returns.cov() * 252  # Matrice de covariance annuelle
+            cov_matrix = Statistics.Statistics.rendre_definie_positive(returns.cov() * 252)  # Matrice de covariance annuelle
             cov = tf.convert_to_tensor(cov_matrix.values, dtype=tf.float32)
 
             while i <= nbOfSimulation:
@@ -61,7 +61,7 @@ class ModernPortfolioTheory():
                 else:
                     weights_np = ModernPortfolioTheory.MoveInSphere(bestWeights, 0.009 + epsilonIncrease)
 
-                weightsList.append(weights_np)
+                weights_np = weights_np / np.sum(weights_np)
                 weights_tf = tf.convert_to_tensor(weights_np, dtype=tf.float32)
                 weights_tf = tf.reshape(weights_tf, [-1, 1])  # Colonne
 
@@ -83,7 +83,7 @@ class ModernPortfolioTheory():
                         highestSharpe = sharpe
                         highestReturn = portfolio_return
                         highestVolatility = portfolio_volatility
-                        index = i
+                        bestWeights = weights_np
 
                 i += 1
                 if i % 10000 == 0:
@@ -95,7 +95,7 @@ class ModernPortfolioTheory():
             print(f"[Volatility] Erreur : {e}")
 
         return (
-            weightsList[index],
+            bestWeights,
             highestReturn,
             highestVolatility,
             highestSharpe,
@@ -145,13 +145,11 @@ class ModernPortfolioTheory():
         if localPortfolio is None:
             localPortfolio = []
         portfolioU = pu.PortfolioUtilities()
+        previousSharpeRatio = 0
         timeSeries = data
         data = data.pct_change(fill_method=None)
         bestPortfolios = []
         queueMessages.put_nowait(f"[Portfolio]Starting Simulation, Process id {os.getpid()}")
-        while not queueMessages.empty():
-            event.set()
-            time.sleep(0.05)
         for j in range(nbOfSimulation):
             queueMessages.put(f"[Portfolio]Running Simulation, Process id {os.getpid()}, simulation {j}")
             enoughData = False
@@ -169,10 +167,20 @@ class ModernPortfolioTheory():
             weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages, nbOfSimulation)
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
-            bestPortfolios.append([portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
-                originalData, lowerVolatility, returnsLower, sharpeLower])
-        queueMessages.put_nowait(f"[Portfolio]Ending Simulation, Process id {os.getpid()}")
-        queueResults.put(bestPortfolios[np.argmax(list(zip(*bestPortfolios))[4])])
+            #try:
+            if highestReturn/highestVolatility > previousSharpeRatio:
+                bestPortfolios = [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
+                                  originalData, lowerVolatility, returnsLower, sharpeLower]
+            #except Exception as e:
+                #pass
+                #queueMessages.put_nowait(f"[Portfolio]Error : {e}")
+
+            queueMessages.put_nowait(f"[Portfolio]Ending Simulation, Process id {os.getpid()}")
+            while not queueMessages.empty():
+                event.set()
+                time.sleep(0.05)
+        queueResults.put(bestPortfolios)
+        queueMessages.put_nowait(f"[Portfolio]Ending Process, Process id {os.getpid()}")
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
         bestPortfolios = []

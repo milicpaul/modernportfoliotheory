@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 
 class KellyCriterion():
     # Taux sans risque
-    risk_free_rate = 0.02
+    risk_free_rate = 0
     returns = 0
     variance = 0
     # Fonction Kelly pour plusieurs actifs (résout la version matricielle)
