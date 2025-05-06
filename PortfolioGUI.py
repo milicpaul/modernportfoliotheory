@@ -262,10 +262,13 @@ class Gui(NiceGUIElement.NiceGUIElement):
         assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolio[0])
         i = 0
         for a in assetsDescription:
-            if self.kelly.value:
-                self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-2][i]})
-            else:
-                self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
+            try:
+                if self.kelly.value:
+                    self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-2][i]})
+                else:
+                    self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
+            except Exception as e:
+                pass
             i += 1
 
         self.displayGraph(bestPortfolio[6][bestPortfolio[0]], self.CalculateReturn(bestPortfolio))

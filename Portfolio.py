@@ -40,6 +40,9 @@ class ModernPortfolioTheory():
 
     @staticmethod
     def Volatility(returns, optimization, epsilonIncrease, bestWeights, event, queueMessages, nbOfSimulation):
+        if returns.dropna(thresh=int(returns.shape[0] * 0.8), axis=1).columns < returns.columns:
+            queueMessages.put("[Volatility]Not enough data to compute volatility")
+        return ([], 0, 0, 0, 0, 0, 0)
         returns = returns.dropna(thresh=int(returns.shape[0] * 0.8), axis=1)
         highestReturn = 0
         highestVolatility = 0
@@ -167,19 +170,16 @@ class ModernPortfolioTheory():
             weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages, nbOfSimulation)
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
-            #try:
-            if highestReturn/highestVolatility > previousSharpeRatio:
-                bestPortfolios = [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
-                                  originalData, lowerVolatility, returnsLower, sharpeLower]
-            #except Exception as e:
-                #pass
-                #queueMessages.put_nowait(f"[Portfolio]Error : {e}")
 
             queueMessages.put_nowait(f"[Portfolio]Ending Simulation, Process id {os.getpid()}")
             while not queueMessages.empty():
                 event.set()
                 time.sleep(0.05)
-        queueResults.put(bestPortfolios)
+        if len(weightsList) > 0:
+            if highestReturn / highestVolatility > previousSharpeRatio:
+                bestPortfolios = [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
+                                  originalData, lowerVolatility, returnsLower, sharpeLower]
+            queueResults.put(bestPortfolios)
         queueMessages.put_nowait(f"[Portfolio]Ending Process, Process id {os.getpid()}")
 
     def FindMaximum(self, bestPortfolio, nbOfSimulation):
