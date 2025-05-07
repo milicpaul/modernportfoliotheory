@@ -2,6 +2,7 @@ import pandas as pd
 import yfinance as yf
 import os
 from datetime import date
+
 class Refresh():
     def __init__(self):
         if os.name == "nt":
