@@ -32,6 +32,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
         else:
             self.path = Path("C:/Users/paul.milic/Modern Portfolio/")
             self.workingPath = "C:/Users/paul.milic/Modern Portfolio/Data"
+            self.path2 = "C:/Users/paul.milic/Modern Portfolio/"
         self.portfolioStructure = []
         self.fileData = []
         self.assetsName = []
@@ -340,8 +341,9 @@ def update_memory(app):
         app.label_percent.text = f"RAM: {mem.percent}%"
         app.label_process.text = f"Script: {proc_mem.rss / (1024**2):.2f} Mo"
         app.queue_size.text = "Queue size: " + str(app.parallel.queueMessages.qsize())
-        ret = subprocess.run(['/opt/homebrew/Cellar/osx-cpu-temp/1.1.0/bin/osx-cpu-temp'], capture_output=True, text=True)
-        app.temperature.text = ret.stdout.strip()
+        if os.name not in ["Windows", "nt"]:
+            ret = subprocess.run(['/opt/homebrew/Cellar/osx-cpu-temp/1.1.0/bin/osx-cpu-temp'], capture_output=True, text=True)
+            app.temperature.text = ret.stdout.strip()
         time.sleep(0.2)
 
 def update_ui(app, obj, event, queue)->None:

@@ -160,6 +160,7 @@ class ModernPortfolioTheory():
                     portfolio = localPortfolio
                 portfolioLength = len(portfolio)
                 currentData = data[portfolio]
+                currentData.index = pd.DatetimeIndex(currentData.index)
                 currentData = currentData[(currentData.index >= dateFrom) & (
                                            currentData.index <= dateTo)]
                 originalData = timeSeries[portfolio]

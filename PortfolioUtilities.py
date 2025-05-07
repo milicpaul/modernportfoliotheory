@@ -15,9 +15,10 @@ class PortfolioUtilities():
     def __init__(self):
         if os.name == "nt":
             self.path = "C:/Users/paul.milic/Modern Portfolio/"
+            self.path2 = "C:/Users/paul.milic/Modern Portfolio/Data/"
         else:
             self.path = "/Users/paul/Documents/Modern Portfolio Theory Data/"
-        self.df = pd.read_csv(self.path + "Assets Description.csv", sep=",", index_col=False)
+        self.df = pd.read_csv(self.path2 + "Assets Description.csv", sep=",", index_col=False)
 
     def CheckPklFile(self, filename):
         df = pd.read_pickle(self.path + filename)
