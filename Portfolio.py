@@ -40,7 +40,11 @@ class ModernPortfolioTheory():
 
     @staticmethod
     def Volatility(returns, optimization, epsilonIncrease, bestWeights, event, queueMessages, nbOfSimulation):
-        returns = returns.dropna(thresh=int(returns.shape[0] * 0.8), axis=1)
+        lenReturns = len(returns.columns)
+        returns = returns.dropna(thresh=int(returns.shape[0] * 0.5), axis=1)
+        if len(returns.columns) < lenReturns:
+            queueMessages.put("[Volatility]Not enough data to compute volatility")
+            return ([], 0, 0, 0, 0, 0, 0)
         highestReturn = 0
         highestVolatility = 0
         highestSharpe = 0
@@ -51,7 +55,6 @@ class ModernPortfolioTheory():
         bestWeights = np.zeros(len(returns.columns))
 
         try:
-            mean_returns = returns.mean() * 252  # Rendement moyen annuel
             cov_matrix = Statistics.Statistics.rendre_definie_positive(returns.cov() * 252)  # Matrice de covariance annuelle
             cov = tf.convert_to_tensor(cov_matrix.values, dtype=tf.float32)
 
@@ -63,9 +66,10 @@ class ModernPortfolioTheory():
 
                 weights_np = weights_np / np.sum(weights_np)
                 weights_tf = tf.convert_to_tensor(weights_np, dtype=tf.float32)
-                weights_tf = tf.reshape(weights_tf, [-1, 1])  # Colonne
+                weights_tf = tf.reshape(weights_tf, [-1, 1])
 
                 with tf.device('/GPU:0'):
+                    mean_returns = returns.mean() * 252  # Rendement moyen annuel
                     # Calcul du rendement
                     portfolio_return = np.sum(weights_np * mean_returns)
                     # Calcul de la volatilité avec TensorFlow
@@ -95,7 +99,7 @@ class ModernPortfolioTheory():
             print(f"[Volatility] Erreur : {e}")
 
         return (
-            bestWeights,
+            np.round(bestWeights, 2),
             highestReturn,
             highestVolatility,
             highestSharpe,
@@ -130,8 +134,7 @@ class ModernPortfolioTheory():
     def generate_weights(n, min_val=0.01, max_val=0.9):
         alpha = np.ones(n)  # Distribution équilibrée
         vecteur = np.random.dirichlet(alpha, size=1)[0]
-        vecteur = 0.01 + vecteur * (0.9 - 0.01)
-        vecteur = vecteur / vecteur.sum()
+        #vecteur = 0.01 + vecteur * (0.9 - 0.01)
         erreur = 1.0 - vecteur.sum()
         indice_max = np.argmax(vecteur)
         vecteur[indice_max] += erreur
@@ -168,18 +171,15 @@ class ModernPortfolioTheory():
             weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages, nbOfSimulation)
             if showDensity:
                 pu.PortfolioUtilities.ShowDensity(weightsList)
-            #try:
-            if highestReturn/highestVolatility > previousSharpeRatio:
-                bestPortfolios = [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
-                                  originalData, lowerVolatility, returnsLower, sharpeLower]
-            #except Exception as e:
-                #pass
-                #queueMessages.put_nowait(f"[Portfolio]Error : {e}")
 
             queueMessages.put_nowait(f"[Portfolio]Ending Simulation, Process id {os.getpid()}")
             while not queueMessages.empty():
                 event.set()
                 time.sleep(0.05)
+            if len(weightsList) > 0:
+                if highestReturn / highestVolatility > previousSharpeRatio:
+                    bestPortfolios = [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
+                                      originalData, lowerVolatility, returnsLower, sharpeLower]
         queueResults.put(bestPortfolios)
         queueMessages.put_nowait(f"[Portfolio]Ending Process, Process id {os.getpid()}")
 
