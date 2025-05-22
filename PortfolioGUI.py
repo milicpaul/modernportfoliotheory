@@ -40,11 +40,12 @@ class Gui(NiceGUIElement.NiceGUIElement):
         if os.path.exists(self.workingPath + "results.pkl"):
             self.results = pd.read_pickle(self.workingPath + "results.pkl")
 
-        self.columnDefs = [{'field': 'File name'}, {"field": "Selection", 'editable': True}, {'field': 'Number of assets'}, {'field': 'Size'}]
+        self.columnDefs = [{'field': 'File name'}, {"field": "Selection", 'editable': True}, {'field': 'Ratio', 'editable': True}, {'field': 'Number of assets'}, {'field': 'Size'}]
         with ui.splitter(value=70).style('width: 100%') as splitterTop:
             with splitterTop.before:
                 self.firstRow = NiceGUIElement.NiceGUIElement.FirstSplitterBefore(self)
                 self.progressBar = ui.linear_progress()
+                self.progressBar.visible = False
                 self.progressBar.value = 0.0
             with splitterTop.after:
                 with ui.row():
@@ -57,7 +58,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
                 files.sort()
                 for f in files:
                     df = pd.read_pickle(self.path2 + f)
-                    self.fileData.append({"File name": f, "Selection": 0, "Number of assets": len(df.columns), "Size": self.taille_lisible(os.path.getsize(self.path2 + f))})
+                    self.fileData.append({"File name": f, "Selection": 0, "Ratio": 0, "Number of assets": len(df.columns), "Size": self.taille_lisible(os.path.getsize(self.path2 + f))})
                 try:
                     self.aggrid = ui.aggrid({
                         'columnDefs': [
@@ -164,10 +165,8 @@ class Gui(NiceGUIElement.NiceGUIElement):
         try:
             mainRow = self.results[self.results["Portfolio"].apply(lambda x: self.chercher_rec(x, event.args['data']['timestamp']))]
         except Exception as e:
-            print(e)
             return
         row = list(mainRow.Portfolio)[0]
-        mainRow = list(mainRow.Portfolio)
         i = 0
         for isin in row[0]:
             self.assetsName.append({"Asset name": pu.ReturnAssetDescription([isin])[0], "ISIN": isin, "Weight": row[1][i]})
@@ -204,6 +203,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
             else:
                 if colManager.has(('Kelly weight')):
                     self.finalPortfolio.props['options']['columnDefs'] = colManager.remove_all("Kelly weight")
+            self.finalPortfolio.update()
 
     def update_number_of_assets(self, nbAssets, fileName):
         """
@@ -236,14 +236,16 @@ class Gui(NiceGUIElement.NiceGUIElement):
             horizontalalignment='right',
             bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.5)
         )
-
         self.myGraph.update()
         self.finalPortfolio.update()
         self.aggrid.update()
 
     def CalculateReturn(self, bestPortfolio)-> str:
         data = bestPortfolio[6].pct_change(fill_method=None)
-        markovitz = round((data[data.index >  pd.to_datetime(self.DateTo.value)] @ bestPortfolio[1]).sum() * 100, 2)
+        try:
+            markovitz = round((data[data.index >  pd.to_datetime(self.DateTo.value)] @ bestPortfolio[1]).sum() * 100, 2)
+        except Exception as e:
+            pass
         if self.kelly.value:
             kelly = round((data[data.index > pd.to_datetime(self.DateTo.value)] @ bestPortfolio[-2]).sum() * 100, 2)
             return f"Markovitz: {markovitz}% kelly : {kelly}%"
@@ -264,7 +266,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
         for a in assetsDescription:
             try:
                 if self.kelly.value:
-                    self.assetsName.append({"Asset name": a, "Weight": bestPortfolio[1][i], "ISIN": bestPortfolio[0][i], "Kelly weight": bestPortfolio[-2][i]})
+                    self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i], "Kelly weight": bestPortfolio[-2][i]})
                 else:
                     self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
             except Exception as e:
@@ -393,6 +395,6 @@ async def main_page():
     threading.Thread(target=update_ui, args=(app_gui, app_gui.log, parallel.event, parallel.queueMessages), daemon=True).start()
     threading.Thread(target=update_memory, args=(app_gui,), daemon=True).start()
     threading.Thread(target=update_chart, args=(app_gui,), daemon=True).start()
-    #threading.Thread(target=app_gui.GetAllAssetsList, daemon=True).start()
+    threading.Thread(target=app_gui.GetAllAssetsList, daemon=True).start()
 
 ui.run()

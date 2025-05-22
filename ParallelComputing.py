@@ -27,11 +27,16 @@ class Parallel:
         results = []
         while not self.queueResults.empty():
             try:
-                results.append(self.queueResults.get())
+                res = self.queueResults.get()
+                if len(res[0]) > 0:
+                    results.append(res)
             except:
                 pass
         # Calcul du meilleur portefeuille
-        best_portfolio = results[np.argmax([r[4] for r in results])]
+        try:
+            best_portfolio = results[np.argmax([r[4] for r in results])]
+        except Exception as e:
+            pass
         return best_portfolio
 
 

@@ -38,7 +38,7 @@ class NiceGUIElement:
                     gui.queue_size = ui.label()
                     gui.temperature = ui.label()
             with ui.card():
-                with ui.column():
+                with ui.row():
                     gui.DateFrom = NiceGUIElement.DatePicker('Date From', '2018-01-01')
                     gui.DateTo = NiceGUIElement.DatePicker('Date To', '2022-12-31')
         return firstRow

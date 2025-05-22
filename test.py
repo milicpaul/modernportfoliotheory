@@ -1,40 +1,56 @@
-from nicegui import ui, run
-import asyncio
-import pynvml
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# Initialisation NVML une seule fois
-pynvml.nvmlInit()
-handle = pynvml.nvmlDeviceGetHandleByIndex(0)  # GPU 0
+# Generate random data for returns
+def generate_random_data(num_assets, num_days):
+    np.random.seed(42)  # For reproducibility
+    # Generate daily random returns for each asset
+    returns = np.random.randn(num_days, num_assets) * 0.01  # Mean close to 0 and std dev of 1% per day
+    return pd.DataFrame(returns, columns=[f'Asset_{i+1}' for i in range(num_assets)])
 
-# Création de jauges NiceGUI
-gpu_util_gauge = ui.linear_progress(color='green', show_value=True)
-mem_util_gauge = ui.linear_progress(color='orange', show_value=True)
-info_label = ui.label('Initialisation...')
+# Calculate mean returns and covariance matrix
+def calculate_mean_return_and_covariance(returns):
+    mean_returns = returns.mean()
+    covariance_matrix = returns.cov()
+    return mean_returns, covariance_matrix
 
-async def update_gpu_info():
-    while True:
-        mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+# Function to calculate the Markowitz portfolio performance
+def calculate_portfolio_performance(weights, mean_returns, covariance_matrix):
+    portfolio_return = np.sum(weights * mean_returns)
+    portfolio_volatility = np.sqrt(np.dot(weights.T, np.dot(covariance_matrix, weights)))
+    return portfolio_return, portfolio_volatility
 
-        mem_used = mem.used / 1024**2
-        mem_total = mem.total / 1024**2
-        mem_percent = mem_used / mem_total
+# Function to generate the efficient frontier
+def efficient_frontier(mean_returns, covariance_matrix, num_portfolios=10000):
+    results = np.zeros((3, num_portfolios))
+    for i in range(num_portfolios):
+        weights = np.random.random(len(mean_returns))
+        weights /= np.sum(weights)  # Normalize weights
+        portfolio_return, portfolio_volatility = calculate_portfolio_performance(weights, mean_returns, covariance_matrix)
+        results[0,i] = portfolio_return
+        results[1,i] = portfolio_volatility
+        results[2,i] = portfolio_return / portfolio_volatility  # Sharpe ratio
+    return results
 
-        gpu_util = util.gpu / 100
-        mem_util = util.memory / 100
+# Example usage with random data
+num_assets = 5  # Number of assets
+num_days = 252  # Number of trading days in a year
 
-        # MAJ UI
-        gpu_util_gauge.set_value(gpu_util)
-        mem_util_gauge.set_value(mem_util)
-        info_label.set_text(
-            f'GPU: {util.gpu}% | VRAM: {mem_used:.1f}/{mem_total:.1f} Mo ({mem_percent*100:.1f}%)'
-        )
+# Generate random data for returns
+returns = generate_random_data(num_assets, num_days)
 
-        await asyncio.sleep(1)
+# Calculate mean returns and covariance matrix
+mean_returns, covariance_matrix = calculate_mean_return_and_covariance(returns)
 
-@ui.page('/')
-async def main():
-    ui.label('🎮 Utilisation GPU (temps réel)').classes('text-xl font-bold mb-4')
-    await update_gpu_info()
+# Generate the efficient frontier
+results = efficient_frontier(mean_returns, covariance_matrix)
 
-ui.run()
+# Plot the efficient frontier
+plt.figure(figsize=(10, 6))
+plt.scatter(results[1,:], results[0,:], c=results[2,:], cmap='viridis', marker='o')
+plt.title('Markowitz Efficient Frontier')
+plt.xlabel('Volatility (Risk)')
+plt.ylabel('Expected Return')
+plt.colorbar(label='Sharpe Ratio')
+plt.show()
