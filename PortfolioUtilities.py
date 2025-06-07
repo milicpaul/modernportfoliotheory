@@ -260,17 +260,18 @@ class PortfolioUtilities():
 
     def ReturnRandomPortfolio(self, percentage, isin):
         k = 0
+        j = 0
         portfolio = []  # random portfolio
         localRandom = random.Random(time.time_ns() + id(threading.current_thread()))
         for p in percentage:
             if p[1] > 0:
-                if len(isin[k]) < percentage[k][1]:
+                if len(isin[k]) < percentage[j][1]:
                     indices = localRandom.sample(range(len(isin[k])), range(len(isin[k])))
                 else:
-                    indices = localRandom.sample(range(len(isin[k])), percentage[k][1])
-                #indices = [random.choices(range(len(isin[k])), k=percentage[k][1]) for k in range(len(percentage))]
+                    indices = localRandom.sample(range(len(isin[k])), percentage[j][1])
                 portfolio += [isin[k][i] for i in indices]
-            k += 1
+                k += 1
+            j += 1
         k = 0
         return portfolio
 

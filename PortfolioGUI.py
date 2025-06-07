@@ -1,6 +1,4 @@
 from multiprocessing import Event
-from typing import Optional, Any
-
 import psutil
 import pandas as pd
 from datetime import datetime
@@ -241,7 +239,8 @@ class Gui(NiceGUIElement.NiceGUIElement):
         self.aggrid.update()
 
     def CalculateReturn(self, bestPortfolio)-> str:
-        data = bestPortfolio[6].pct_change(fill_method=None)
+        data = self.data[bestPortfolio[0]]
+        data = data.pct_change(fill_method=None)
         try:
             markovitz = round((data[data.index >  pd.to_datetime(self.DateTo.value)] @ bestPortfolio[1]).sum() * 100, 2)
         except Exception as e:
@@ -266,14 +265,13 @@ class Gui(NiceGUIElement.NiceGUIElement):
         for a in assetsDescription:
             try:
                 if self.kelly.value:
-                    self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i], "Kelly weight": bestPortfolio[-2][i]})
+                    self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": str(bestPortfolio[1][i] * 100) + "%", "Kelly weight": bestPortfolio[-2][i]})
                 else:
-                    self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": bestPortfolio[1][i]})
+                    self.assetsName.append({"Asset name": a, "ISIN": bestPortfolio[0][i], "Weight": str(bestPortfolio[1][i] * 100) + "%"})
             except Exception as e:
                 pass
             i += 1
-
-        self.displayGraph(bestPortfolio[6][bestPortfolio[0]], self.CalculateReturn(bestPortfolio))
+        self.displayGraph(self.data[bestPortfolio[0]], self.CalculateReturn(bestPortfolio))
 
     def Simulate(self, nbOfSimulation, nbOfWeight):
         self.numberOfMessages = int(self.nbOfSimulation.value) * 12 + 6
@@ -283,10 +281,10 @@ class Gui(NiceGUIElement.NiceGUIElement):
         self.log.clear()
         portfolio = Portfolio.ModernPortfolioTheory(nbOfSimulation, 2, 4, self.parallel)
         portfolio.nbOfSimulatedWeights = nbOfWeight
-        data, isin = portfolio.BuilHeterogeneousPortfolio(self.portfolioStructure)
+        self.data, isin = portfolio.BuilHeterogeneousPortfolio(self.portfolioStructure, pd.to_datetime(self.DateFrom.value))
         if len(isin) == 0:
             return []
-        bestPortfolios = self.parallel.run_select_random_assets_parallel(portfolio, data, isin, nbOfSimulation,
+        bestPortfolios = self.parallel.run_select_random_assets_parallel(portfolio, self.data[self.data.index < pd.to_datetime(self.DateTo.value)], isin, nbOfSimulation,
                                            self.portfolioStructure, showDensity, isRandom,
                                            pd.to_datetime(self.DateFrom.value), pd.to_datetime(self.DateTo.value), [])
         if self.kelly.value:
@@ -395,6 +393,6 @@ async def main_page():
     threading.Thread(target=update_ui, args=(app_gui, app_gui.log, parallel.event, parallel.queueMessages), daemon=True).start()
     threading.Thread(target=update_memory, args=(app_gui,), daemon=True).start()
     threading.Thread(target=update_chart, args=(app_gui,), daemon=True).start()
-    threading.Thread(target=app_gui.GetAllAssetsList, daemon=True).start()
+    #threading.Thread(target=app_gui.GetAllAssetsList, daemon=True).start()
 
 ui.run()

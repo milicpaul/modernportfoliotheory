@@ -82,13 +82,15 @@ class ModernPortfolioTheory():
                     sharpeLowerVolatility = round(portfolio_return / portfolio_volatility, 2)
 
                 if portfolio_volatility > 0:
-                    sharpe = portfolio_return / portfolio_volatility
-                    if sharpe > highestSharpe:
-                        highestSharpe = sharpe
-                        highestReturn = portfolio_return
-                        highestVolatility = portfolio_volatility
-                        bestWeights = weights_np
-
+                    try:
+                        sharpe = portfolio_return / portfolio_volatility
+                        if sharpe > highestSharpe:
+                            highestSharpe = sharpe
+                            highestReturn = portfolio_return
+                            highestVolatility = portfolio_volatility
+                            bestWeights = weights_np
+                    except ZeroDivisionError as e:
+                        print(e)
                 i += 1
                 if i % 10000 == 0:
                     while not queueMessages.empty():
@@ -115,35 +117,52 @@ class ModernPortfolioTheory():
         for i in range(nbOfSimulation):
             self.Volatility(data, i * self.nbOfSimulatedWeights, r, weight, self.nbOfSimulatedWeights)
 
-    def BuilHeterogeneousPortfolio(self, fileNames):
+    def BuilHeterogeneousPortfolio(self, fileNames, dateFrom):
         fullData = pd.DataFrame()
         data = []
         assets = []
         for f in fileNames:
-            localDf = pd.read_pickle(self.path + f[0])
-            localDf = localDf.loc[:, localDf.isna().mean() * 100 < 95]
-            localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 95, :]
-            assets.append(list(localDf.columns))
-            data.append(localDf)
+            if f[1] > 0:
+                localDf = pd.read_pickle(self.path + f[0])
+                localDf = localDf[localDf.index >= dateFrom]
+                #localDf = localDf.loc[:, localDf.isna().mean() * 100 < 50]
+                #localDf = localDf.loc[localDf.isna().mean(axis=1) * 100 < 50, :]
+                assets.append(list(localDf.columns))
+                data.append(localDf)
         if len(assets) > 0:
             fullData = pd.concat(data, axis=1)
             fullData = fullData.loc[:, ~fullData.columns.duplicated()]
         return fullData, assets
 
     @staticmethod
-    def generate_weights(n, min_val=0.01, max_val=0.9):
+    def generate_weights(n, min_val = 0.01):
+        # Génère un vecteur Dirichlet
         alpha = np.ones(n)  # Distribution équilibrée
-        vecteur = np.random.dirichlet(alpha, size=1)[0]
-        #vecteur = 0.01 + vecteur * (0.9 - 0.01)
-        erreur = 1.0 - vecteur.sum()
-        indice_max = np.argmax(vecteur)
-        vecteur[indice_max] += erreur
-        return np.round(vecteur, 2)
+        vec = np.random.dirichlet(alpha)
+
+        while True:
+            vec = np.random.dirichlet(alpha)
+            rounded = np.round(vec, 2)
+            # Corriger la somme
+            diff = 1.0 - np.sum(rounded)
+            i = np.argmax(rounded)
+            rounded[i] += diff
+            rounded = np.round(rounded, 2)  # re-arrondir après correction
+            if np.all(rounded >= min_val):
+                return rounded
+
+    def generate_weights2(n, min_val=0.01):
+        alpha = np.ones(n)  # Distribution équilibrée
+        samples = []
+        while len(samples) < n:
+            s = np.random.dirichlet(alpha)
+            if np.all(s >= min_val):
+                samples.append(s)
+        return np.round(np.array(samples), 2)
 
     @staticmethod
     def SelectRandomAssets(data, isin, nbOfSimulation, percentage, queueResults,
                            queueMessages, event, showDensity=False, random=True,
-                           dateFrom = pd.to_datetime('2022-06-15'), dateTo = pd.to_datetime('2025-04-15'),
                            localPortfolio=None):
         if localPortfolio is None:
             localPortfolio = []
@@ -163,8 +182,6 @@ class ModernPortfolioTheory():
                     portfolio = localPortfolio
                 portfolioLength = len(portfolio)
                 currentData = data[portfolio]
-                currentData = currentData[(currentData.index >= dateFrom) & (
-                                           currentData.index <= dateTo)]
                 originalData = timeSeries[portfolio]
                 enoughData = currentData.shape[1] == portfolioLength
             weightsList, highestReturn, highestVolatility, highestSharpe, lowerVolatility, returnsLower, sharpeLower = ModernPortfolioTheory.Volatility(currentData, False, 0, [], event, queueMessages, nbOfSimulation)
@@ -176,9 +193,12 @@ class ModernPortfolioTheory():
                 event.set()
                 time.sleep(0.05)
             if len(weightsList) > 0:
-                if highestReturn / highestVolatility > previousSharpeRatio:
-                    bestPortfolios = [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
-                                      originalData, lowerVolatility, returnsLower, sharpeLower]
+                try:
+                    if highestReturn / highestVolatility > previousSharpeRatio:
+                        bestPortfolios = [portfolio, weightsList, highestReturn, highestVolatility, highestSharpe, currentData,
+                                          originalData, lowerVolatility, returnsLower, sharpeLower]
+                except Exception as e:
+                    print(e)
         queueResults.put(bestPortfolios)
         queueMessages.put_nowait(f"[Portfolio]Ending Process, Process id {os.getpid()}")
 

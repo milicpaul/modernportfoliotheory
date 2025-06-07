@@ -1,6 +1,14 @@
 
 UBS = ["LU0006344922"]
-A=294.46
+
+EuroSTOXX50 = ["ADS.DE", "ADYEN.AS", "AD.AS", "AI.PA", "AIR.PA", "ALV.DE", "ABI.BR", "Naamloze vennootschap",
+               "ASML.AS", "CS.PA", "BAS.DE", "BAYN.DE", "BBVA.MC", "SAN.MC", "BMW.DE", "BNP.PA",
+               "BN.PA", "DB1.DE", "DHL.DE", "DTE.DE", "ENEL.MI", "ENI.MI", "EL.PA", "RACE.MI",
+               "FLTR.L", "RMS.PA", "IBE.MC", "ITX.MC", "IFX.DE", "INGA.AS", "ISP.MI", "KER.PA",
+               "OR.PA", "MC.PA", "MBG.DE", "MUV2.DE", "NOKIA.HE", "NDA-FI.HE", "RI.PA", "PRX.AS",
+               "SAF.PA", "SGO.PA", "SAN.PA", "SAP.DE", "SU.PA", "SIE.DE", "STLAM.MI", "TTE.PA",
+               "DG.PA", "UCG.MI", "VOW.DE"]
+
 FTSEMIB = [
     'IT0003128367',  # ENEL S.p.A.
     'IT0005239360',  # UniCredit S.p.A.
@@ -476,3 +484,15 @@ p2 = ['US0231351067', 'US12572Q1058', 'US02079K3059', 'US1255231003', 'US0530151
 p3 = ['US0530151036', 'US0311621009', 'US12572Q1058', 'US02079K3059', 'US11135F1012'] #32.496 - 11.5343 - 2.8173 NASDAQ 100
 
 
+FTSE100 = [
+    "III", "ADM", "AAF", "ALW", "AAL", "ANTO", "AHT", "ABF", "AZN", "AUTO",
+    "AV", "BAB", "BA", "BARC", "BTRW", "BEZ", "BKG", "BP", "BATS", "BT-A",
+    "BNZL", "CNA", "CCEP", "CCH", "CPG", "CTEC", "CRDA", "DCC", "DGE", "DPLM",
+    "EDV", "ENT", "EZJ", "EXPN", "FCIT", "FRES", "GAW", "GLEN", "GSK", "HLN",
+    "HLMA", "HIK", "HSX", "HWDN", "HSBA", "IHG", "IMI", "IMB", "INF", "ICG",
+    "IAG", "ITRK", "JD", "KGF", "LAND", "LGEN", "LLOY", "LMP", "LSEG", "MNG",
+    "MKS", "MRO", "MNDI", "NG", "NWG", "NXT", "PSON", "PSH", "PSN", "PHNX",
+    "PCT", "PRU", "RKT", "REL", "RTO", "RMV", "RIO", "RR", "SGE", "SBRY",
+    "SDR", "SMT", "SGRO", "SVT", "SHEL", "SMIN", "SN", "SPX", "SSE", "STAN",
+    "STJ", "TW", "TSCO", "ULVR", "UU", "UTG", "VOD", "WEIR", "WTB", "WPP"
+]
