@@ -1,100 +1,21 @@
-III
-ADM
-AAF
-ALW
-AAL
-ANTO
-AHT
-ABF
-AZN
-AUTO
-AV
-BAB
-BA
-BARC
-BTRW
-BEZ
-BKG
-BP
-BATS
-BT-A
-BNZL
-CNA
-CCEP
-CCH
-CPG
-CTEC
-CRDA
-DCC
-DGE
-DPLM
-EDV
-ENT
-EZJ
-EXPN
-FCIT
-FRES
-GAW
-GLEN
-GSK
-HLN
-HLMA
-HIK
-HSX
-HWDN
-HSBA
-IHG
-IMI
-IMB
-INF
-ICG
-IAG
-ITRK
-JD
-KGF
-LAND
-LGEN
-LLOY
-LMP
-LSEG
-MNG
-MKS
-MRO
-MNDI
-NG
-NWG
-NXT
-PSON
-PSH
-PSN
-PHNX
-PCT
-PRU
-RKT
-REL
-RTO
-RMV
-RIO
-RR
-SGE
-SBRY
-SDR
-SMT
-SGRO
-SVT
-SHEL
-SMIN
-SN
-SPX
-SSE
-STAN
-STJ
-TW
-TSCO
-ULVR
-UU
-UTG
-VOD
-WEIR
-WTB
-WPP
+import tensorflow as tf
+import pandas as pd
+
+workingPath = "/Users/paul/Documents/Modern Portfolio Theory Data/Data/"
+
+# Liste des devices disponibles
+devices = tf.config.list_physical_devices()
+print("Devices disponibles :")
+for d in devices:
+    print(f" - {d.device_type}: {d.name}")
+
+# Vérifier spécifiquement le GPU Apple Metal
+for device in tf.config.list_physical_devices():
+    print(f" - {device.name}")
+gpu_devices = tf.config.list_physical_devices('GPU')
+if gpu_devices:
+    print("\n✅ GPU Metal détecté !")
+else:
+    print("\n⚠️ Pas de GPU Metal détecté, TensorFlow tournera sur CPU.")
+
+results = pd.read_pickle(workingPath + "results.pkl")
