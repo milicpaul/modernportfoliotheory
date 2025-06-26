@@ -394,5 +394,5 @@ async def main_page():
     threading.Thread(target=update_memory, args=(app_gui,), daemon=True).start()
     threading.Thread(target=update_chart, args=(app_gui,), daemon=True).start()
     #threading.Thread(target=app_gui.GetAllAssetsList, daemon=True).start()
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0 = all logs, 1 = WARNING+, 2 = ERROR+, 3 = FATAL only
 ui.run()

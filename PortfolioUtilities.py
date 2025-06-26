@@ -1,3 +1,5 @@
+from typing import Optional, Any
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
@@ -92,7 +94,7 @@ class PortfolioUtilities():
         found = []
         for i in isin:
             try:
-                description = next(iter(self.df.loc[self.df["ISIN"] == i, "Description"].values), None)
+                description: Optional[Any] = next(iter(self.df.loc[self.df["ISIN"] == i, "Description"].values), None)
             except Exception as e:
                 print("ReturnAssetDescription:", e)
             if not description is None:

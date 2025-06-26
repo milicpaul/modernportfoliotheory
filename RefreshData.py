@@ -24,7 +24,7 @@ class Refresh():
         df = pd.read_csv(self.path + fileName, on_bad_lines='skip', encoding_errors='ignore', sep=separator)
         isin = df.iloc[:, df.columns.get_loc(symbol)].tolist()
         for i in isin:
-            isinDf = yf.download(i, start="2015-01-01", interval="1d")
+            isinDf = yf.download(i, start="2015-01-01", interval="1d", auto_adjust=True)
             if len(isinDf) > 0:
                 fullData.append(isinDf['Close'])
         finalData = pd.concat(fullData, axis=1)
@@ -40,14 +40,21 @@ class Refresh():
     def FromList(self, isin, fileName):
         fullData = []
         for i in isin:
-            isinDf = yf.download(i, start="2015-01-01", interval="1d")
+            isinDf = yf.download(i, start="2015-01-01", interval="1d", auto_adjust=True)
             if len(isinDf) > 0:
                 fullData.append(isinDf['Close'])
         finalData = pd.concat(fullData, axis=1)
-        finalData.to_pickle(self.path + fileName + self.formattedToday + '.pkl')
+        finalData.to_pickle(self.path + fileName + ' ' +  self.formattedToday + '.pkl')
         finalData.to_csv(self.path + fileName + '.csv')
 
 refresh = Refresh()
 #refresh.CheckTimeSeries("ETF  Bonds Fixed Income CHF 2025-05-08.pkl")
 #refresh.Refresh('flat-ui__data-Thu May 22 2025.csv', 'Symbol', ',')
-refresh.FromList(assets.EuroSTOXX50, 'FTSE 100')
+#refresh.FromList(assets.DAX40, 'DAX40')
+#refresh.FromList(assets.DowJones, 'Dow Jones')
+refresh.FromList(assets.nasdaq_100_tickers, 'NASDAQ 100')
+#refresh.FromList(assets.AEX, 'AEX')
+#refresh.FromList(assets.AllSwissShares, 'AllSwissShares')
+#refresh.FromList(assets.CAC40, 'CAC 40')
+#refresh.FromList(assets.EuropeanIndices, 'European Indices')
+

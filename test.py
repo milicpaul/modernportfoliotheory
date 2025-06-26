@@ -18,4 +18,10 @@ if gpu_devices:
 else:
     print("\n⚠️ Pas de GPU Metal détecté, TensorFlow tournera sur CPU.")
 
-results = pd.read_pickle(workingPath + "results.pkl")
+shares = pd.read_csv(workingPath + "Share Explorer export.csv", sep=";")
+shares2 = pd.read_pickle(workingPath + "AllSwissShares 2025-06-23.pkl")
+l= shares['ValorSymbol'].tolist()
+l1=[]
+for i in l:
+    l1.append(i + '.SW')
+print(l1)

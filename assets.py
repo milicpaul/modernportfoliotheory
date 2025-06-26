@@ -496,3 +496,35 @@ FTSE100 = [
     "SDR", "SMT", "SGRO", "SVT", "SHEL", "SMIN", "SN", "SPX", "SSE", "STAN",
     "STJ", "TW", "TSCO", "ULVR", "UU", "UTG", "VOD", "WEIR", "WTB", "WPP"
 ]
+
+AllSwissShares = ['ABBN.SW', 'ABBNE.SW', 'ACLN.SW', 'ADXN.SW', 'ADEN.SW', 'ADVN.SW', 'AEVS.SW', 'AIRE.SW',
+                  'ALC.SW', 'ALLN.SW', 'ALPN.SW', 'ALPNE.SW', 'ALSN.SW', 'AFP.SW', 'AMRZ.SW', 'APGN.SW',
+                  'ARBN.SW', 'ARYN.SW', 'ASCNE.SW', 'ASCN.SW', 'ASWN.SW', 'AUTN.SW', 'AVOL.SW', 'BANB.SW',
+                  'BALN.SW', 'BARN.SW', 'BLKB.SW', 'BSLN.SW', 'BSKP.SW', 'BION.SW', 'BCGE.SW', 'BCJ.SW',
+                  'BCVN.SW', 'BEKN.SW', 'BEAN.SW', 'BELL.SW', 'BBN.SW', 'BIOV.SW', 'BKW.SW', 'BOSN.SW',
+                  'BUCN.SW', 'BUCNE.SW', 'BCHN.SW', 'BRKN.SW', 'BVZN.SW', 'BYS.SW', 'CALN.SW', 'CPEN.SW',
+                  'CMBN.SW', 'CHAM.SW', 'CIE.SW', 'CICN.SW', 'CFT.SW', 'CFTE.SW', 'CLN.SW', 'CLTN.SW',
+                  'COTN.SW', 'CPHN.SW', 'CURN.SW', 'DAE.SW', 'DKSH.SW', 'DOCM.SW', 'DOKA.SW', 'DESN.SW',
+                  'ESUN.SW', 'EEII.SW', 'EFGN.SW', 'ELMN.SW', 'EMMN.SW', 'EMSN.SW', 'EPIC.SW', 'EVE.SW',
+                  'FTON.SW', 'FHZN.SW', 'FORN.SW', 'FREN.SW', 'GALD.SW', 'GALE.SW', 'GAM.SW', 'GAV.SW',
+                  'GEBN.SW', 'GEBNE.SW', 'GF.SW', 'GIVN.SW', 'GLKBN.SW', 'GMI.SW', 'GRKP.SW', 'GURN.SW',
+                  'HBMN.SW', 'HBMNE.SW', 'HELN.SW', 'HIAG.SW', 'HLEE.SW', 'HOLN.SW', 'HT5.SW', 'HUBN.SW',
+                  'HBLN.SW', 'IDIA.SW', 'IMPN.SW', 'IFCN.SW', 'INRN.SW', 'ISN.SW', 'IREN.SW', 'VBSN.SW',
+                  'BAER.SW', 'JFN.SW', 'KARN.SW', 'KLIN.SW', 'KOMN.SW', 'KUD.SW', 'KNIN.SW', 'KURN.SW',
+                  'LAND.SW', 'LECN.SW', 'LEHN.SW', 'LEON.SW', 'LISN.SW', 'LISNE.SW', 'LISP.SW', 'LISPE.SW',
+                  'LOGN.SW', 'LOGNE.SW', 'LONN.SW', 'LUKN.SW', 'MCHN.SW', 'MOVE.SW', 'MED.SW', 'MEDX.SW',
+                  'MTG.SW', 'METN.SW', 'MBTN.SW', 'MIKN.SW', 'MOZN.SW', 'MOZN1.SW', 'MOBN.SW', 'MOLN.SW',
+                  'AERO.SW', 'NEAG.SW', 'NBEN.SW', 'NESN.SW', 'NOVNEE.SW', 'NOVN.SW', 'NREN.SW', 'OFN.SW',
+                  'OERL.SW', 'ORON.SW', 'PGHN.SW', 'PSREF1.SW', 'PEAN.SW', 'PEDU.SW', 'PMN.SW', 'PMNE.SW',
+                  'PLAN.SW', 'PPGN.SW', 'PEHN.SW', 'PSPN.SW', 'RSGN.SW', 'RLF.SW', 'CFR.SW', 'RIEN.SW',
+                  'ROG.SW', 'RO.SW', 'REHN.SW', 'SDZ.SW', 'SANN.SW', 'SCHN.SW', 'SCHNE.SW', 'SCHP.SW',
+                  'SCHPE.SW', 'STRN.SW', 'SWTQ.SW', 'SENS.SW', 'SFPN.SW', 'SFSN.SW', 'SGSN.SW', 'SFZN.SW',
+                  'SIGN.SW', 'SIKA.SW', 'SKAN.SW', 'SNBN.SW', 'SWON.SW', 'SOON.SW', 'SGKN.SW', 'SRAIL.SW',
+                  'STGN.SW', 'STMN.SW', 'SUN.SW', 'SUNN.SW', 'UHR.SW', 'UHRN.SW', 'SLHN.SW', 'SLHNE.SW',
+                  'SPSN.SW', 'SREN.SW', 'SCMN.SW', 'SQN.SW', 'TECN.SW', 'TEMN.SW', 'TEMNE.SW', 'TKBP.SW',
+                  'TIBN.SW', 'TXGN.SW', 'UBXN.SW', 'UBSG.SW', 'VZUG.SW', 'VLRT.SW', 'VATN.SW', 'VARN.SW',
+                  'VACN.SW', 'VAHN.SW', 'VETN.SW', 'VILN.SW', 'VONN.SW', 'VZN.SW', 'WKBN.SW', 'WARN.SW',
+                  'WIHN.SW', 'XLS.SW', 'YTME.SW', 'YPSN.SW', 'ZEHN.SW', 'ZUBN.SW', 'ZUGN.SW', 'ZUGER.SW', 'ZURN.SW', 'ZWM.SW']
+
+EuropeanIndices = ['^STOXX50E', '^STOXX600', '^FCHI', '^GDAXI', '^FTSE', '^FTSEMIB.MI', '^IBEX', '^SSMI',
+                   '^AEX', '^BFX', '^OMXS30']
