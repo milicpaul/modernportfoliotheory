@@ -18,8 +18,9 @@ class Parallel:
         if localPortfolio is None:
             localPortfolio = []
         """Exécute la simulation dans plusieurs processus."""
-        workers = [Process(target=portfolio.SelectRandomAssets, args=(data, isin, nbOfSimulation,
-                           percentage, self.queueResults, self.queueMessages, self.event, showDensity, isRandom, dateFrom, dateTo)) for i in range(multiprocessing.cpu_count() - 2)]
+        workers = [Process(target=portfolio.SelectRandomAssets,
+                           args=(data, isin, nbOfSimulation, percentage, self.queueResults,
+                                 self.queueMessages, self.event, showDensity, isRandom)) for i in range(multiprocessing.cpu_count() - 2)]
         for w in workers:
             w.start()
         for w in workers:
