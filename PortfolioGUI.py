@@ -40,79 +40,59 @@ class Gui(NiceGUIElement.NiceGUIElement):
             self.results = pd.read_pickle(self.workingPath + "results.pkl")
 
         self.columnDefs = [{'field': 'File name'}, {"field": "Selection", 'editable': True}, {'field': 'Ratio', 'editable': True}, {'field': 'Number of assets'}, {'field': 'Size'}]
-        with ui.splitter(value=70).style('width: 100%') as splitterTop:
-            with splitterTop.before:
-                self.firstRow = NiceGUIElement.NiceGUIElement.FirstSplitterBefore(self)
-                self.progressBar = ui.linear_progress()
-                self.progressBar.visible = False
-                self.progressBar.value = 0.0
-            with splitterTop.after:
-                with ui.row():
-                    with ui.card().style('width: 500px; height: 120px;'):  # <<<<<< ICI, tu ajustes la taille
-                        self.process_graph = self.ProcessGraph()
-        with ui.splitter(horizontal=False, reverse=False, value=45,
-                         on_change=lambda e: ui.notify(e.value)).style('width: 100%') as self.splitter:
-            with self.splitter.before:
+        with ui.tabs().classes('w-full') as tabs:
+            tab1 = ui.tab('📈 Simulation')
+            tab2 = ui.tab('📊 Data')
+
+        with ui.tab_panels(tabs, value=tab1).classes('w-full'):
+            with ui.tab_panel(tab1):
+                with ui.splitter(value=70).style('width: 100%') as splitterTop:
+                    with splitterTop.before:
+                        self.firstRow = NiceGUIElement.NiceGUIElement.FirstSplitterBefore(self)
+                        self.progressBar = ui.linear_progress()
+                        self.progressBar.visible = False
+                        self.progressBar.value = 0.0
+                    with splitterTop.after:
+                        with ui.row():
+                            with ui.card().style('width: 500px; height: 120px;'):  # <<<<<< ICI, tu ajustes la taille
+                                self.process_graph = self.ProcessGraph()
+                with ui.splitter(horizontal=False, reverse=False, value=45,
+                                 on_change=lambda e: ui.notify(e.value)).style('width: 100%') as self.splitter:
+                    with self.splitter.before:
+                        try:
+                            self.resultGrid = NiceGUIElement.NiceGUIElement.ResultGrid(self.rowData, lambda event: self.FindPortfolio(event))
+                            self.finalPortfolio = NiceGUIElement.NiceGUIElement.FinalPortfolio(self.assetsName)
+                            ui.switch('Dark', on_change=self.handle_theme_change)
+                            self.btnSimulate = ui.button('Simulate', on_click=self.Callback)
+                            ui.separator()
+                        except Exception as e:
+                            print(e)
+                    with self.splitter.after:
+                        self.log = ui.log(max_lines=100000).classes('w-full h-30').bind_visibility_from(self.ShowLog, 'value')
+                        self.myGraph = ui.matplotlib(figsize=(9, 5))
+                        self.ax = self.myGraph.figure.gca()
+                        self.ax.set_yscale('log')
+                        self.ax.set_title("Données issues d'un DataFrame")
+                        self.ax.set_xlabel("x")
+                        self.ax.set_ylabel("Valeurs")
+                        self.a = ui.audio(self.path2 + 'mixkit-air-zoom-vacuum-2608.wav')
+                        self.a.visible = False
+            with ui.tab_panel(tab2):
                 files = [f for f in os.listdir(self.path) if f.endswith('.pkl')]
                 files.sort()
                 for f in files:
                     df = pd.read_pickle(self.path2 + f)
-                    self.fileData.append({"File name": f, "Selection": 0, "Ratio": 0, "Number of assets": len(df.columns), "Size": self.taille_lisible(os.path.getsize(self.path2 + f))})
-                try:
-                    self.aggrid = ui.aggrid({
-                        'columnDefs': [
-                            {"field": "returns"},
-                            {"field": "volatility"},
-                            {"field": "sharpe", "filter": 'agTextColumnFilter', 'floatingFilter': True},
-                            {"field": "returns lowest vol"},
-                            {"field": "lowest volatility"},
-                            {"field": "sharpe lowest vol"},
-                            {"field": "timestamp", "sort": "descending"},
-                        ],
-                        'rowData': self.rowData
-                        }).classes('max-h-50').style('width: 98%').on('cellClicked', lambda event: self.FindPortfolio(event))
-                    self.finalPortfolio = ui.aggrid({
-                        'columnDefs': [
-                            {"field": "Asset name"},
-                            {"field": "ISIN"},
-                            {"field": "Weight"}
-                        ],
-                        'rowData': self.assetsName
-                    }).classes('max-h-50').style('width: 98%')
-                    ui.switch('Dark', on_change=self.handle_theme_change)
-                    self.btnSimulate = ui.button('Simulate', on_click=self.Callback)
-                    ui.separator()
-                except Exception as e:
-                    print(e)
-            with self.splitter.after:
+                    self.fileData.append({"File name": f, "Selection": 0, "Ratio": 0, "Number of assets": len(df.columns),
+                                          "Size": self.taille_lisible(os.path.getsize(self.path2 + f))})
                 self.aggrid2 = ui.aggrid({
                     'columnDefs':
                         self.columnDefs,
                     'rowData':
                         self.fileData
                 }).classes('max-h-80')
-                self.log = ui.log(max_lines=100000).classes('w-full h-30').bind_visibility_from(self.ShowLog, 'value')
                 self.aggrid2.on('cellValueChanged', self._on_cell_clicked)
-                self.myGraph = ui.matplotlib(figsize=(9, 5))
-                self.ax = self.myGraph.figure.gca()
-                self.ax.set_yscale('log')
-                self.ax.set_title("Données issues d'un DataFrame")
-                self.ax.set_xlabel("x")
-                self.ax.set_ylabel("Valeurs")
-                self.a = ui.audio(self.path2 + 'mixkit-air-zoom-vacuum-2608.wav')
-                self.a.visible = False
 
-        self.fullAssets = ui.aggrid({
-            'columnDefs': [
-                {"field": "Name", "filter": 'agTextColumnFilter', 'floatingFilter': False, 'checkboxSelection': True},
-                {"field": "ISIN", "filter": 'agTextColumnFilter', 'floatingFilter': False},
-                {"field": "Volatility"},
-                {"field": "Sum positive"},
-                {"field": "Sum negative"},
-                {"field": "File name"},
-            ],
-            'rowData': self.fullAssetsList
-        }).classes('max-h-300').style('width: 100%')
+        self.fullAssets = NiceGUIElement.NiceGUIElement.FullAssets(self.fullAssetsList)
         if os.path.exists(self.workingPath + "results.pkl"):
             self.RefreshRowData()
         #self.GetAllAssetsList()
@@ -184,7 +164,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
             except Exception as a:
                 self.ShowLog.value = True
                 self.log.push(f"[RefreshData] {a}")
-        self.aggrid.update()
+        self.resultGrid.update()
 
     def GetAllAssetsList(self):
         portfolioUtilities = PortfolioUtilities.PortfolioUtilities()
@@ -237,7 +217,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
         )
         self.myGraph.update()
         self.finalPortfolio.update()
-        self.aggrid.update()
+        self.resultGrid.update()
 
     def CalculateReturn(self, bestPortfolio)-> str:
         data = self.data[bestPortfolio[0]]
@@ -260,7 +240,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
          "sharpe": round(bestPortfolio[4], 2), "returns lowest vol": round(bestPortfolio[8] * 100, 2),
          "lowest volatility": round(bestPortfolio[7] * 100, 2), "sharpe lowest vol": round(bestPortfolio[9], 2),
          "timestamp": bestPortfolio[-1].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]})
-        self.aggrid.update()
+        self.resultGrid.update()
         assetsDescription = portfolioUtilities.ReturnAssetDescription(bestPortfolio[0])
         i = 0
         for a in assetsDescription:
@@ -330,7 +310,7 @@ class Gui(NiceGUIElement.NiceGUIElement):
         return bestPortfolio
 
     def handle_theme_change(self, e: events.ValueChangeEventArguments):
-        self.aggrid.classes(add='ag-theme-balham-dark' if e.value else 'ag-theme-quartz',
+        self.resultGrid.classes(add='ag-theme-balham-dark' if e.value else 'ag-theme-quartz',
                      remove='ag-theme-quartz ag-theme-balham-dark')
 
 def update_memory(app):
