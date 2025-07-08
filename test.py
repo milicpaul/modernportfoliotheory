@@ -1,27 +1,20 @@
-import tensorflow as tf
-import pandas as pd
+from nicegui import ui
 
-workingPath = "/Users/paul/Documents/Modern Portfolio Theory Data/Data/"
+# Création des tabs
+with ui.tabs().classes('w-full') as tabs:
+    tab1 = ui.tab('📈 Indices')
+    tab2 = ui.tab('📊 Données')
+    tab3 = ui.tab('⚙️ Paramètres')
 
-# Liste des devices disponibles
-devices = tf.config.list_physical_devices()
-print("Devices disponibles :")
-for d in devices:
-    print(f" - {d.device_type}: {d.name}")
+# Contenu associé à chaque tab
+with ui.tab_panels(tabs, value=tab1).classes('w-full'):
+    with ui.tab_panel(tab1):
+        ui.label('Voici les indices boursiers européens 📈')
 
-# Vérifier spécifiquement le GPU Apple Metal
-for device in tf.config.list_physical_devices():
-    print(f" - {device.name}")
-gpu_devices = tf.config.list_physical_devices('GPU')
-if gpu_devices:
-    print("\n✅ GPU Metal détecté !")
-else:
-    print("\n⚠️ Pas de GPU Metal détecté, TensorFlow tournera sur CPU.")
+    with ui.tab_panel(tab2):
+        ui.label('Voici les données financières 📊')
 
-shares = pd.read_csv(workingPath + "Share Explorer export.csv", sep=";")
-shares2 = pd.read_pickle(workingPath + "AllSwissShares 2025-06-23.pkl")
-l= shares['ValorSymbol'].tolist()
-l1=[]
-for i in l:
-    l1.append(i + '.SW')
-print(l1)
+    with ui.tab_panel(tab3):
+        ui.label('Voici les options de configuration ⚙️')
+
+ui.run()

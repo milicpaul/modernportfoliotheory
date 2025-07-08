@@ -96,17 +96,23 @@ class PortfolioUtilities():
         for i in isin:
             try:
                 description: Optional[Any] = next(iter(self.df.loc[self.df["ISIN"] == i, "Description"].values), None)
+                descriptionOk = True
             except Exception as e:
+                descriptionOk = False
                 print("ReturnAssetDescription:", e)
-            if not description is None:
-                found.append(description)
-            else:
-                ticker = self.isin_to_ticker(i, True)
-                if ticker != "Ticker introuvable":
-                    self.df.loc[len(self.df)] = [i, ticker]
-                    found.append(ticker)
+            try:
+                if descriptionOk:
+                    found.append(description)
                 else:
-                    found.append(i)
+                    ticker = self.isin_to_ticker(i, True)
+                    if ticker != "Ticker introuvable":
+                        #self.df.loc[len(self.df)] = [i, ticker]
+                        found.append(ticker)
+                    else:
+                        found.append(i)
+                    print(ticker)
+            except Exception as e:
+                pass
         return found
 
     def isin_to_ticker(self, isin, name = True):
