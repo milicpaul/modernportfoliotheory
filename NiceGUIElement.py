@@ -42,32 +42,9 @@ class NiceGUIElement:
                     gui.DateFrom = NiceGUIElement.DatePicker('Date From', '2018-01-01')
                     gui.DateTo = NiceGUIElement.DatePicker('Date To', '2022-12-31')
         return firstRow
-    @staticmethod
-    def ResultGrid(rowData, gridEvent):
-        return ui.aggrid({
-                'columnDefs': [
-                    {"field": "returns"},
-                    {"field": "volatility"},
-                    {"field": "sharpe", "filter": 'agTextColumnFilter', 'floatingFilter': True},
-                    {"field": "returns lowest vol"},
-                    {"field": "lowest volatility"},
-                    {"field": "sharpe lowest vol"},
-                        {"field": "timestamp", "sort": "descending"},
-                ],
-                'rowData': rowData
-                }).classes('max-h-50').style('width: 98%').on('cellClicked', lambda event: gridEvent)
-    staticmethod
-    def FinalPortfolio(assetsName,):
-        return ui.aggrid({
-            'columnDefs': [
-                {"field": "Asset name"},
-                {"field": "ISIN"},
-                {"field": "Weight"}
-            ],
-            'rowData': assetsName}).classes('max-h-50').style('width: 98%')
 
     @staticmethod
-    def FullAssets(fullAssetsList):
+    def FullAssets(fullAssetsList) -> ui.aggrid:
         return ui.aggrid({
             'columnDefs': [
                 {"field": "Name", "filter": 'agTextColumnFilter', 'floatingFilter': False, 'checkboxSelection': True},
@@ -79,4 +56,34 @@ class NiceGUIElement:
             ],
             'rowData': fullAssetsList
         }).classes('max-h-300').style('width: 100%')
+
+    @staticmethod
+    def ResultGrid(rowData, localEvent):
+        return ui.aggrid({
+                'columnDefs': [
+                    {"field": "returns"},
+                    {"field": "volatility"},
+                    {"field": "sharpe", "filter": 'agTextColumnFilter', 'floatingFilter': True},
+                    {"field": "returns lowest vol"},
+                    {"field": "lowest volatility"},
+                    {"field": "sharpe lowest vol"},
+                    {"field": "timestamp", "sort": "descending"},
+                ],
+                'rowData': rowData
+                }).classes('max-h-50').style('width: 98%').on('cellClicked', lambda event: localEvent)
+
+    @staticmethod
+    def FinalPortfolio(assetsName):
+        return ui.aggrid({
+                'columnDefs': [
+                    {"field": "Asset name"},
+                    {"field": "ISIN"},
+                    {"field": "Weight"}
+                ],
+                'rowData': assetsName
+            }).classes('max-h-50').style('width: 98%')
+
+
+
+
 
