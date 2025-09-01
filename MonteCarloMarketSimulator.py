@@ -29,6 +29,7 @@ class MonteCarloMarketSimulator:
             prices[:, t, :] = prices[:, t-1, :] * np.exp(shocks[:, t-1, :])
 
         return prices
+        pass
 
 
 # Exemple avec 3 actifs
