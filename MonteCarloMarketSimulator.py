@@ -10,15 +10,25 @@ class MonteCarloMarketSimulator:
         n_scenarios : nombre de scénarios Monte Carlo
         horizon : nombre de pas de temps (ex: 252 jours de trading)
         """
-        initalPrices = mainList[6]
+        initialPrices = mainList[6]
         self.weights = mainList[1]
-        self.mu = initalPrices.pct_change().mean()
-        self.cov = initalPrices.pct_change().cov()
-        self.start_prices = np.array(initalPrices.iloc[-1])
+        self.mu = initialPrices.pct_change().mean()
+        self.cov = initialPrices.pct_change().cov()
+        self.start_prices = np.array(initialPrices.iloc[-1])
         self.n_assets = len(self.start_prices)
         self.n_scenarios = 1000
         self.horizon = 252
-        prices = self.simulate()
+        self.prices = self.simulate()
+        self.ComputeReturns(self.start_prices)
+
+    def ComputeReturns(self, start_prices):
+        initialPrice = self.start_prices @ self.weights
+        print(initialPrice)
+        bestPrice = []
+        for p in self.prices:
+            bestPrice.append(p[-1] @ self.weights)
+            for b in bestPrice:
+                print(b)
 
     def simulate(self):
         # Simule les rendements journaliers multivariés
@@ -30,10 +40,7 @@ class MonteCarloMarketSimulator:
 
         for t in range(1, self.horizon + 1):
             prices[:, t, :] = prices[:, t-1, :] * np.exp(shocks[:, t-1, :])
-
         return prices
-        pass
-
 
 if __name__ == "__main__":
     # Exemple avec 3 actifs
